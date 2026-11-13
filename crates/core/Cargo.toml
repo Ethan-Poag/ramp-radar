@@ -1,0 +1,29 @@
+[package]
+name = "aircraft-monitor-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Core engine, providers, notifications and HTTP API for Aircraft Monitor"
+
+[dependencies]
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time", "net", "fs"] }
+axum = { version = "0.8", features = ["macros"] }
+futures-util = "0.3"
+tokio-stream = { version = "0.1", features = ["sync"] }
+async-trait = "0.1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
+rusqlite = { version = "0.32", features = ["bundled"] }
+csv = "1"
+chrono = { version = "0.4", features = ["serde"] }
+thiserror = "2"
+tracing = "0.1"
+uuid = { version = "1", features = ["v4"] }
+rust-embed = { version = "8", features = ["mime-guess"] }
+mime_guess = "2"
+lettre = { version = "0.11", default-features = false, features = ["builder", "smtp-transport", "tokio1-rustls-tls", "tokio1"] }
+
+[dev-dependencies]
+tower = { version = "0.5", features = ["util"] }
+http-body-util = "0.1"
