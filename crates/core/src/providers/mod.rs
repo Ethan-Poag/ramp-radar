@@ -43,6 +43,9 @@ pub enum ProviderError {
     Unsupported(&'static str),
     #[error("{0}")]
     Failed(String),
+    /// HTTP 429; carries the server's Retry-After (seconds) when given.
+    #[error("rate limited by {0}")]
+    RateLimited(&'static str, Option<u64>),
 }
 
 #[async_trait]
@@ -198,7 +201,10 @@ impl Chain {
             Err(e) => {
                 st.fails += 1;
                 st.last_err = Some(e.to_string());
-                let secs = (15u64 << (st.fails - 1).min(5)).min(300);
+                let secs = match e {
+                    ProviderError::RateLimited(_, Some(s)) => (*s).clamp(5, 900),
+                    _ => (15u64 << (st.fails - 1).min(5)).min(300),
+                };
                 st.retry_at = Some(Instant::now() + Duration::from_secs(secs));
             }
         }

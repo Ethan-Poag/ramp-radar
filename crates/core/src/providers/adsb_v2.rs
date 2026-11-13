@@ -129,6 +129,10 @@ impl Provider for AdsbV2 {
         }
         let resp = req.send().await.map_err(http_err)?;
         let status = resp.status();
+        if status.as_u16() == 429 {
+            let ra = resp.headers().get("retry-after").and_then(|v| v.to_str().ok()).and_then(|v| v.trim().parse().ok());
+            return Err(ProviderError::RateLimited(self.id(), ra));
+        }
         if !status.is_success() {
             return Err(ProviderError::Failed(format!("{} returned HTTP {}", self.id(), status.as_u16())));
         }
