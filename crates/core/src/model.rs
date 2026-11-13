@@ -77,9 +77,14 @@ impl Target {
             Target::Hex(h) => ac.hex.eq_ignore_ascii_case(h),
             Target::Reg(r) => {
                 ac.reg.as_deref().is_some_and(|x| x.eq_ignore_ascii_case(r))
-                    || self.known_hex().is_some_and(|h| ac.hex.eq_ignore_ascii_case(&h))
+                    || self
+                        .known_hex()
+                        .is_some_and(|h| ac.hex.eq_ignore_ascii_case(&h))
             }
-            Target::Callsign(c) => ac.callsign.as_deref().is_some_and(|x| x.trim().eq_ignore_ascii_case(c)),
+            Target::Callsign(c) => ac
+                .callsign
+                .as_deref()
+                .is_some_and(|x| x.trim().eq_ignore_ascii_case(c)),
         }
     }
 }
@@ -238,7 +243,10 @@ impl Event {
             EventKind::Landing => "landed at",
             EventKind::Takeoff => "departed from",
         };
-        format!("{} ({}) {} {}", self.label, self.aircraft, verb, self.airport)
+        format!(
+            "{} ({}) {} {}",
+            self.label, self.aircraft, verb, self.airport
+        )
     }
     pub fn body(&self) -> String {
         let mut s = self.headline();

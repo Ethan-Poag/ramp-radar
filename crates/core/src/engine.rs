@@ -39,7 +39,9 @@ pub fn evaluate(
     let fix = obs.and_then(|a| a.position().map(|p| (a, p)));
     let Some((ac, (lat, lon))) = fix else {
         // No fix this poll: go stale after STALE_SECS.
-        let stale = st.last_seen.is_none_or(|ls| now - ls > Duration::seconds(STALE_SECS));
+        let stale = st
+            .last_seen
+            .is_none_or(|ls| now - ls > Duration::seconds(STALE_SECS));
         if stale || st.status == Status::Disabled {
             st.status = Status::NotSeen;
             st.eta_min = None;
@@ -56,7 +58,11 @@ pub fn evaluate(
         (Some(c), Some(a)) => !on_ground && a > c,
         _ => false,
     };
-    let in_geom = if prev.inside { dist <= radius * EXIT_HYSTERESIS } else { dist <= radius };
+    let in_geom = if prev.inside {
+        dist <= radius * EXIT_HYSTERESIS
+    } else {
+        dist <= radius
+    };
     let within = in_geom && !above_ceiling;
 
     let mk = |kind: EventKind, alert: bool| Event {
@@ -66,7 +72,11 @@ pub fn evaluate(
         ts: now,
         kind,
         airport: t.airport.clone(),
-        aircraft: ac.reg.clone().or(ac.callsign.clone()).unwrap_or_else(|| ac.hex.to_uppercase()),
+        aircraft: ac
+            .reg
+            .clone()
+            .or(ac.callsign.clone())
+            .unwrap_or_else(|| ac.hex.to_uppercase()),
         distance_nm: Some(dist),
         alt_ft: alt,
         lat: Some(lat),
@@ -128,7 +138,11 @@ pub fn evaluate(
     st.provider = provider.map(String::from).or(prev.provider.clone());
     let moved = st.trail.last().is_none_or(|p| (p.lat, p.lon) != (lat, lon));
     if moved {
-        st.trail.push(TrailPoint { lat, lon, t: now.timestamp() });
+        st.trail.push(TrailPoint {
+            lat,
+            lon,
+            t: now.timestamp(),
+        });
         if st.trail.len() > TRAIL_MAX {
             st.trail.remove(0);
         }
@@ -141,7 +155,10 @@ mod tests {
     use super::*;
     use crate::geo::{destination, DistUnit};
 
-    const AP: AirportPos = AirportPos { lat: 42.3643, lon: -71.0052 };
+    const AP: AirportPos = AirportPos {
+        lat: 42.3643,
+        lon: -71.0052,
+    };
 
     fn tracker() -> Tracker {
         Tracker {
@@ -149,7 +166,10 @@ mod tests {
             label: "Test".into(),
             target: Target::Reg("N1".into()),
             airport: "KBOS".into(),
-            radius: Radius { value: 10.0, unit: DistUnit::Nm },
+            radius: Radius {
+                value: 10.0,
+                unit: DistUnit::Nm,
+            },
             alert_enter: true,
             alert_exit: true,
             alert_landing: true,
@@ -193,7 +213,11 @@ mod tests {
     #[test]
     fn inbound_then_enter_event_once() {
         let t = tracker();
-        let (s, e) = step(&t, &TrackerState::default(), Some(&ac_at(30.0, 8000, false)));
+        let (s, e) = step(
+            &t,
+            &TrackerState::default(),
+            Some(&ac_at(30.0, 8000, false)),
+        );
         assert_eq!(s.status, Status::Inbound);
         assert!(e.is_empty());
         let eta = s.eta_min.unwrap();
@@ -228,7 +252,11 @@ mod tests {
     fn ceiling_blocks_within() {
         let mut t = tracker();
         t.ceiling_ft = Some(5000);
-        let (s, e) = step(&t, &TrackerState::default(), Some(&ac_at(5.0, 12000, false)));
+        let (s, e) = step(
+            &t,
+            &TrackerState::default(),
+            Some(&ac_at(5.0, 12000, false)),
+        );
         assert_eq!(s.status, Status::Inbound);
         assert!(e.is_empty());
         let (s, e) = step(&t, &s, Some(&ac_at(4.0, 4000, false)));
@@ -269,7 +297,11 @@ mod tests {
     #[test]
     fn stale_becomes_not_seen_and_keeps_position() {
         let t = tracker();
-        let (s, _) = step(&t, &TrackerState::default(), Some(&ac_at(30.0, 8000, false)));
+        let (s, _) = step(
+            &t,
+            &TrackerState::default(),
+            Some(&ac_at(30.0, 8000, false)),
+        );
         // poll with nothing, shortly after: keep status
         let (s1, _) = evaluate(&t, AP, &s, None, None, now() + Duration::seconds(30));
         assert_eq!(s1.status, Status::Inbound);
@@ -290,7 +322,10 @@ mod tests {
     #[test]
     fn miles_radius_is_converted() {
         let mut t = tracker();
-        t.radius = Radius { value: 10.0, unit: DistUnit::Mi }; // 8.69 nm
+        t.radius = Radius {
+            value: 10.0,
+            unit: DistUnit::Mi,
+        }; // 8.69 nm
         let (s, _) = step(&t, &TrackerState::default(), Some(&ac_at(9.5, 3000, false)));
         assert_ne!(s.status, Status::Within);
         let (s, _) = step(&t, &TrackerState::default(), Some(&ac_at(8.0, 3000, false)));
@@ -309,11 +344,17 @@ mod tests {
 
     #[test]
     fn quiet_hours_wrap() {
-        let q = QuietHours { start_min: 22 * 60, end_min: 7 * 60 };
+        let q = QuietHours {
+            start_min: 22 * 60,
+            end_min: 7 * 60,
+        };
         assert!(q.contains(23 * 60));
         assert!(q.contains(3 * 60));
         assert!(!q.contains(12 * 60));
-        let q = QuietHours { start_min: 9 * 60, end_min: 17 * 60 };
+        let q = QuietHours {
+            start_min: 9 * 60,
+            end_min: 17 * 60,
+        };
         assert!(q.contains(10 * 60) && !q.contains(18 * 60));
     }
 
@@ -321,9 +362,15 @@ mod tests {
     fn target_parsing_and_matching() {
         assert_eq!(Target::parse("n800bs"), Some(Target::Reg("N800BS".into())));
         assert_eq!(Target::parse("a4f123"), Some(Target::Hex("a4f123".into())));
-        assert_eq!(Target::parse("DAL42"), Some(Target::Callsign("DAL42".into())));
+        assert_eq!(
+            Target::parse("DAL42"),
+            Some(Target::Callsign("DAL42".into()))
+        );
         assert_eq!(Target::parse("C-FABC"), Some(Target::Reg("C-FABC".into())));
-        let ac = Aircraft { hex: "a96ffe".into(), ..Default::default() };
+        let ac = Aircraft {
+            hex: "a96ffe".into(),
+            ..Default::default()
+        };
         assert!(Target::Reg("N707QS".into()).matches(&ac)); // by derived hex
     }
 }

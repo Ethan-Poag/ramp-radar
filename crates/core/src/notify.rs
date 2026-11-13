@@ -33,7 +33,11 @@ pub struct Notifier {
 
 impl Notifier {
     pub fn new(http: reqwest::Client, secrets: Arc<dyn SecretStore>) -> Self {
-        Notifier { http, secrets, desktop_hook: Mutex::new(None) }
+        Notifier {
+            http,
+            secrets,
+            desktop_hook: Mutex::new(None),
+        }
     }
     /// Desktop shell registers a native-notification callback here.
     pub fn set_desktop_hook(&self, hook: DesktopHook) {
@@ -57,7 +61,12 @@ impl Notifier {
         let want_sound = channels.contains(&ChannelKind::Sound);
         let want_desktop = channels.contains(&ChannelKind::Desktop);
         if want_sound || want_desktop {
-            ui(UiAlert { title: title.into(), body: body.into(), sound: want_sound && n.sound, desktop: want_desktop && n.desktop });
+            ui(UiAlert {
+                title: title.into(),
+                body: body.into(),
+                sound: want_sound && n.sound,
+                desktop: want_desktop && n.desktop,
+            });
         }
         for &ch in channels {
             let r: Result<(), String> = match ch {
@@ -80,7 +89,11 @@ impl Notifier {
             if let Err(e) = &r {
                 tracing::warn!("notification via {ch:?} failed: {e}");
             }
-            out.push(ChannelResult { channel: ch, ok: r.is_ok(), error: r.err() });
+            out.push(ChannelResult {
+                channel: ch,
+                ok: r.is_ok(),
+                error: r.err(),
+            });
         }
         out
     }
@@ -110,7 +123,10 @@ impl Notifier {
         if !s.notifications.webhook.enabled {
             return Err("webhook is not enabled in Settings".into());
         }
-        let url = self.secrets.get("webhook_url").ok_or("webhook URL is not set")?;
+        let url = self
+            .secrets
+            .get("webhook_url")
+            .ok_or("webhook URL is not set")?;
         let payload = serde_json::json!({
             "title": title, "message": body, "text": format!("{title}: {body}"),
             "source": "aircraft-monitor", "ts": chrono::Utc::now().to_rfc3339()
@@ -123,18 +139,28 @@ impl Notifier {
         if !c.enabled {
             return Err("Twilio is not enabled in Settings".into());
         }
-        let token = self.secrets.get("twilio_auth_token").ok_or("Twilio auth token is not set")?;
+        let token = self
+            .secrets
+            .get("twilio_auth_token")
+            .ok_or("Twilio auth token is not set")?;
         if c.account_sid.is_empty() || c.from.is_empty() || c.to.is_empty() {
             return Err("Twilio SID / from / to must be filled in".into());
         }
-        let url = format!("https://api.twilio.com/2010-04-01/Accounts/{}/Messages.json", c.account_sid);
+        let url = format!(
+            "https://api.twilio.com/2010-04-01/Accounts/{}/Messages.json",
+            c.account_sid
+        );
         let text = format!("{title}: {body}");
         let text: String = text.chars().take(300).collect();
         let r = self
             .http
             .post(url)
             .basic_auth(&c.account_sid, Some(token))
-            .form(&[("To", c.to.as_str()), ("From", c.from.as_str()), ("Body", text.as_str())])
+            .form(&[
+                ("To", c.to.as_str()),
+                ("From", c.from.as_str()),
+                ("Body", text.as_str()),
+            ])
             .send()
             .await;
         check(r).await
@@ -150,24 +176,46 @@ impl Notifier {
         }
         let from: Mailbox = c.from.parse().map_err(|_| "invalid From address")?;
         let to: Mailbox = c.to.parse().map_err(|_| "invalid To address")?;
-        let msg = Message::builder().from(from).to(to).subject(title).body(body.to_string()).map_err(|e| e.to_string())?;
+        let msg = Message::builder()
+            .from(from)
+            .to(to)
+            .subject(title)
+            .body(body.to_string())
+            .map_err(|e| e.to_string())?;
         let mut b = match c.security.as_str() {
             "tls" => AsyncSmtpTransport::<Tokio1Executor>::relay(&c.host),
-            "none" => Ok(AsyncSmtpTransport::<Tokio1Executor>::builder_dangerous(&c.host)),
+            "none" => Ok(AsyncSmtpTransport::<Tokio1Executor>::builder_dangerous(
+                &c.host,
+            )),
             _ => AsyncSmtpTransport::<Tokio1Executor>::starttls_relay(&c.host),
         }
         .map_err(|e| e.to_string())?
         .port(c.port);
         if !c.username.is_empty() {
-            let pw = self.secrets.get("smtp_password").ok_or("SMTP password is not set")?;
+            let pw = self
+                .secrets
+                .get("smtp_password")
+                .ok_or("SMTP password is not set")?;
             b = b.credentials(Credentials::new(c.username.clone(), pw));
         }
-        b.build().send(msg).await.map(|_| ()).map_err(|e| format!("SMTP error: {e}"))
+        b.build()
+            .send(msg)
+            .await
+            .map(|_| ())
+            .map_err(|e| format!("SMTP error: {e}"))
     }
 }
 
 fn ascii(s: &str) -> String {
-    s.chars().map(|c| if c.is_ascii() && !c.is_control() { c } else { '-' }).collect()
+    s.chars()
+        .map(|c| {
+            if c.is_ascii() && !c.is_control() {
+                c
+            } else {
+                '-'
+            }
+        })
+        .collect()
 }
 
 async fn check(r: Result<reqwest::Response, reqwest::Error>) -> Result<(), String> {
@@ -194,7 +242,10 @@ mod tests {
             label: "L".into(),
             target: Target::Hex("abcdef".into()),
             airport: "KBOS".into(),
-            radius: Radius { value: 1.0, unit: DistUnit::Nm },
+            radius: Radius {
+                value: 1.0,
+                unit: DistUnit::Nm,
+            },
             alert_enter: true,
             alert_exit: false,
             alert_landing: true,
@@ -208,13 +259,26 @@ mod tests {
     }
     fn ev(alert: bool) -> Event {
         Event {
-            id: 0, tracker_id: "x".into(), label: "L".into(), ts: chrono::Utc::now(), kind: EventKind::Enter,
-            airport: "KBOS".into(), aircraft: "N1".into(), distance_nm: None, alt_ft: None, lat: None, lon: None, alert,
+            id: 0,
+            tracker_id: "x".into(),
+            label: "L".into(),
+            ts: chrono::Utc::now(),
+            kind: EventKind::Enter,
+            airport: "KBOS".into(),
+            aircraft: "N1".into(),
+            distance_nm: None,
+            alt_ft: None,
+            lat: None,
+            lon: None,
+            alert,
         }
     }
     #[test]
     fn quiet_hours_suppress_delivery() {
-        let q = Some(QuietHours { start_min: 22 * 60, end_min: 7 * 60 });
+        let q = Some(QuietHours {
+            start_min: 22 * 60,
+            end_min: 7 * 60,
+        });
         assert!(should_deliver(&tr(q), &ev(true), 12 * 60));
         assert!(!should_deliver(&tr(q), &ev(true), 23 * 60));
         assert!(!should_deliver(&tr(None), &ev(false), 12 * 60));

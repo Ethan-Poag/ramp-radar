@@ -5,15 +5,38 @@ use serde::{Deserialize, Serialize};
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum ProviderConfig {
     /// readsb / dump1090 `aircraft.json` over HTTP, e.g. http://pi.local/tar1090/data/aircraft.json
-    Local { url: String, #[serde(default = "yes")] enabled: bool },
-    AdsbLol { #[serde(default = "yes")] enabled: bool },
-    AirplanesLive { #[serde(default = "yes")] enabled: bool },
-    AdsbFi { #[serde(default = "yes")] enabled: bool },
+    Local {
+        url: String,
+        #[serde(default = "yes")]
+        enabled: bool,
+    },
+    AdsbLol {
+        #[serde(default = "yes")]
+        enabled: bool,
+    },
+    AirplanesLive {
+        #[serde(default = "yes")]
+        enabled: bool,
+    },
+    AdsbFi {
+        #[serde(default = "yes")]
+        enabled: bool,
+    },
     /// OAuth client-credentials: client id here, secret in secret store ("opensky_client_secret")
-    OpenSky { client_id: String, #[serde(default)] enabled: bool },
+    OpenSky {
+        client_id: String,
+        #[serde(default)]
+        enabled: bool,
+    },
     /// ADS-B Exchange via RapidAPI; key in secret store ("adsbx_rapidapi_key")
-    AdsbExchange { #[serde(default)] enabled: bool },
-    Mock { #[serde(default)] enabled: bool },
+    AdsbExchange {
+        #[serde(default)]
+        enabled: bool,
+    },
+    Mock {
+        #[serde(default)]
+        enabled: bool,
+    },
 }
 fn yes() -> bool {
     true
@@ -109,11 +132,17 @@ impl Default for Settings {
     fn default() -> Self {
         Settings {
             providers: vec![
-                ProviderConfig::Local { url: String::new(), enabled: false },
+                ProviderConfig::Local {
+                    url: String::new(),
+                    enabled: false,
+                },
                 ProviderConfig::AdsbLol { enabled: true },
                 ProviderConfig::AirplanesLive { enabled: true },
                 ProviderConfig::AdsbFi { enabled: true },
-                ProviderConfig::OpenSky { client_id: String::new(), enabled: false },
+                ProviderConfig::OpenSky {
+                    client_id: String::new(),
+                    enabled: false,
+                },
                 ProviderConfig::AdsbExchange { enabled: false },
                 ProviderConfig::Mock { enabled: false },
             ],
@@ -121,8 +150,16 @@ impl Default for Settings {
             distance_unit: crate::geo::DistUnit::Nm,
             theme: Theme::System,
             notifications: Notifications {
-                ntfy: NtfyConfig { enabled: false, server: "https://ntfy.sh".into(), topic: String::new() },
-                email: EmailConfig { port: 587, security: "starttls".into(), ..Default::default() },
+                ntfy: NtfyConfig {
+                    enabled: false,
+                    server: "https://ntfy.sh".into(),
+                    topic: String::new(),
+                },
+                email: EmailConfig {
+                    port: 587,
+                    security: "starttls".into(),
+                    ..Default::default()
+                },
                 sound: true,
                 desktop: true,
                 ..Default::default()

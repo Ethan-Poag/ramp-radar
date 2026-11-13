@@ -27,18 +27,24 @@ impl Store {
                 kind TEXT NOT NULL, json TEXT NOT NULL);
              CREATE INDEX IF NOT EXISTS ev_tracker ON events(tracker_id, ts);",
         )?;
-        Ok(Store { conn: Mutex::new(conn) })
+        Ok(Store {
+            conn: Mutex::new(conn),
+        })
     }
 
     pub fn list_trackers(&self) -> R<Vec<Tracker>> {
         let c = self.conn.lock().unwrap();
         let mut stmt = c.prepare("SELECT json FROM trackers ORDER BY pos, rowid")?;
         let rows = stmt.query_map([], |r| r.get::<_, String>(0))?;
-        Ok(rows.filter_map(|j| serde_json::from_str(&j.ok()?).ok()).collect())
+        Ok(rows
+            .filter_map(|j| serde_json::from_str(&j.ok()?).ok())
+            .collect())
     }
     pub fn get_tracker(&self, id: &str) -> R<Option<Tracker>> {
         let c = self.conn.lock().unwrap();
-        let j: Option<String> = c.query_row("SELECT json FROM trackers WHERE id=?", [id], |r| r.get(0)).ok();
+        let j: Option<String> = c
+            .query_row("SELECT json FROM trackers WHERE id=?", [id], |r| r.get(0))
+            .ok();
         Ok(j.and_then(|j| serde_json::from_str(&j).ok()))
     }
     pub fn upsert_tracker(&self, t: &Tracker) -> R<()> {
@@ -61,10 +67,12 @@ impl Store {
 
     pub fn settings(&self) -> Settings {
         let c = self.conn.lock().unwrap();
-        c.query_row("SELECT json FROM kv WHERE key='settings'", [], |r| r.get::<_, String>(0))
-            .ok()
-            .and_then(|j| serde_json::from_str(&j).ok())
-            .unwrap_or_default()
+        c.query_row("SELECT json FROM kv WHERE key='settings'", [], |r| {
+            r.get::<_, String>(0)
+        })
+        .ok()
+        .and_then(|j| serde_json::from_str(&j).ok())
+        .unwrap_or_default()
     }
     pub fn set_settings(&self, s: &Settings) -> R<()> {
         let c = self.conn.lock().unwrap();
@@ -79,7 +87,12 @@ impl Store {
         let c = self.conn.lock().unwrap();
         c.execute(
             "INSERT INTO events(tracker_id,ts,kind,json) VALUES(?,?,?,?)",
-            params![e.tracker_id, e.ts.timestamp(), format!("{:?}", e.kind).to_lowercase(), serde_json::to_string(e).unwrap()],
+            params![
+                e.tracker_id,
+                e.ts.timestamp(),
+                format!("{:?}", e.kind).to_lowercase(),
+                serde_json::to_string(e).unwrap()
+            ],
         )?;
         e.id = c.last_insert_rowid();
         Ok(())
@@ -92,7 +105,9 @@ impl Store {
             "SELECT id,json FROM events WHERE ?1 IS NULL ORDER BY ts DESC, id DESC LIMIT ?2"
         };
         let mut stmt = c.prepare(sql)?;
-        let rows = stmt.query_map(params![tracker, limit as i64], |r| Ok((r.get::<_, i64>(0)?, r.get::<_, String>(1)?)))?;
+        let rows = stmt.query_map(params![tracker, limit as i64], |r| {
+            Ok((r.get::<_, i64>(0)?, r.get::<_, String>(1)?))
+        })?;
         Ok(rows
             .filter_map(|r| {
                 let (id, j) = r.ok()?;
@@ -107,10 +122,15 @@ impl Store {
 pub fn events_to_csv(events: &[Event]) -> String {
     fn esc(s: &str) -> String {
         // CSV-injection guard + quoting
-        let s = if s.starts_with(['=', '+', '-', '@']) { format!("'{s}") } else { s.to_string() };
+        let s = if s.starts_with(['=', '+', '-', '@']) {
+            format!("'{s}")
+        } else {
+            s.to_string()
+        };
         format!("\"{}\"", s.replace('"', "\"\""))
     }
-    let mut out = String::from("time_utc,tracker,aircraft,event,airport,distance_nm,altitude_ft,lat,lon\n");
+    let mut out =
+        String::from("time_utc,tracker,aircraft,event,airport,distance_nm,altitude_ft,lat,lon\n");
     for e in events {
         out.push_str(&format!(
             "{},{},{},{},{},{},{},{},{}\n",
@@ -139,7 +159,10 @@ mod tests {
             label: "=cmd()".into(),
             target: Target::Reg("N1".into()),
             airport: "KBOS".into(),
-            radius: Radius { value: 5.0, unit: DistUnit::Mi },
+            radius: Radius {
+                value: 5.0,
+                unit: DistUnit::Mi,
+            },
             alert_enter: true,
             alert_exit: false,
             alert_landing: true,
@@ -161,7 +184,10 @@ mod tests {
         a.label = "changed".into();
         s.upsert_tracker(&a).unwrap();
         let l = s.list_trackers().unwrap();
-        assert_eq!(l.iter().map(|t| t.id.as_str()).collect::<Vec<_>>(), ["a", "b"]);
+        assert_eq!(
+            l.iter().map(|t| t.id.as_str()).collect::<Vec<_>>(),
+            ["a", "b"]
+        );
         assert_eq!(l[0].label, "changed");
         assert!(s.delete_tracker("a").unwrap());
         assert!(!s.delete_tracker("a").unwrap());

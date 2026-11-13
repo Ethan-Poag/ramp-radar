@@ -40,16 +40,96 @@ struct Row {
 
 /// Small built-in set so the app works offline on first run.
 const BUILTIN: &[(&str, &str, &str, &str, f64, f64, i32)] = &[
-    ("KBOS", "BOS", "General Edward Lawrence Logan International Airport", "Boston", 42.3643, -71.0052, 20),
-    ("PHNL", "HNL", "Daniel K Inouye International Airport", "Honolulu", 21.3187, -157.9224, 13),
-    ("PHJR", "JRF", "Kalaeloa Airport", "Kapolei", 21.3075, -158.0703, 30),
-    ("PHDH", "HDH", "Dillingham Airfield", "Mokuleia", 21.5795, -158.1970, 14),
-    ("KJFK", "JFK", "John F Kennedy International Airport", "New York", 40.6398, -73.7789, 13),
-    ("KLAX", "LAX", "Los Angeles International Airport", "Los Angeles", 33.9425, -118.4081, 125),
-    ("KSFO", "SFO", "San Francisco International Airport", "San Francisco", 37.6213, -122.3790, 13),
-    ("KORD", "ORD", "Chicago O'Hare International Airport", "Chicago", 41.9786, -87.9048, 672),
-    ("KATL", "ATL", "Hartsfield Jackson Atlanta International Airport", "Atlanta", 33.6367, -84.4281, 1026),
-    ("EGLL", "LHR", "London Heathrow Airport", "London", 51.4706, -0.4619, 83),
+    (
+        "KBOS",
+        "BOS",
+        "General Edward Lawrence Logan International Airport",
+        "Boston",
+        42.3643,
+        -71.0052,
+        20,
+    ),
+    (
+        "PHNL",
+        "HNL",
+        "Daniel K Inouye International Airport",
+        "Honolulu",
+        21.3187,
+        -157.9224,
+        13,
+    ),
+    (
+        "PHJR",
+        "JRF",
+        "Kalaeloa Airport",
+        "Kapolei",
+        21.3075,
+        -158.0703,
+        30,
+    ),
+    (
+        "PHDH",
+        "HDH",
+        "Dillingham Airfield",
+        "Mokuleia",
+        21.5795,
+        -158.1970,
+        14,
+    ),
+    (
+        "KJFK",
+        "JFK",
+        "John F Kennedy International Airport",
+        "New York",
+        40.6398,
+        -73.7789,
+        13,
+    ),
+    (
+        "KLAX",
+        "LAX",
+        "Los Angeles International Airport",
+        "Los Angeles",
+        33.9425,
+        -118.4081,
+        125,
+    ),
+    (
+        "KSFO",
+        "SFO",
+        "San Francisco International Airport",
+        "San Francisco",
+        37.6213,
+        -122.3790,
+        13,
+    ),
+    (
+        "KORD",
+        "ORD",
+        "Chicago O'Hare International Airport",
+        "Chicago",
+        41.9786,
+        -87.9048,
+        672,
+    ),
+    (
+        "KATL",
+        "ATL",
+        "Hartsfield Jackson Atlanta International Airport",
+        "Atlanta",
+        33.6367,
+        -84.4281,
+        1026,
+    ),
+    (
+        "EGLL",
+        "LHR",
+        "London Heathrow Airport",
+        "London",
+        51.4706,
+        -0.4619,
+        83,
+    ),
 ];
 
 impl AirportDb {
@@ -63,7 +143,12 @@ impl AirportDb {
                     name: n.to_string(),
                     kind: "large_airport".into(),
                     city: Some(c.to_string()),
-                    country: if i.starts_with('K') || i.starts_with('P') { "US" } else { "GB" }.into(),
+                    country: if i.starts_with('K') || i.starts_with('P') {
+                        "US"
+                    } else {
+                        "GB"
+                    }
+                    .into(),
                     lat: *la,
                     lon: *lo,
                     elevation_ft: Some(*e),
@@ -108,7 +193,11 @@ impl AirportDb {
         self.airports
             .iter()
             .find(|a| a.ident.eq_ignore_ascii_case(c))
-            .or_else(|| self.airports.iter().find(|a| a.iata.as_deref().is_some_and(|i| i.eq_ignore_ascii_case(c))))
+            .or_else(|| {
+                self.airports
+                    .iter()
+                    .find(|a| a.iata.as_deref().is_some_and(|i| i.eq_ignore_ascii_case(c)))
+            })
     }
 
     /// Ranked search: exact ident/IATA > prefix > name/city substring. Bigger airports win ties.
@@ -134,7 +223,9 @@ impl AirportDb {
                 } else if ident.starts_with(&q) || (!iata.is_empty() && iata.starts_with(&q)) {
                     1
                 } else if a.name.to_lowercase().contains(&q)
-                    || a.city.as_deref().is_some_and(|c| c.to_lowercase().contains(&q))
+                    || a.city
+                        .as_deref()
+                        .is_some_and(|c| c.to_lowercase().contains(&q))
                 {
                     2
                 } else {
@@ -157,7 +248,12 @@ pub async fn load(cache: &Path, http: &reqwest::Client) -> AirportDb {
             }
         }
     }
-    match http.get(OURAIRPORTS_URL).send().await.and_then(|r| r.error_for_status()) {
+    match http
+        .get(OURAIRPORTS_URL)
+        .send()
+        .await
+        .and_then(|r| r.error_for_status())
+    {
         Ok(resp) => {
             if let Ok(bytes) = resp.bytes().await {
                 if let Ok(db) = AirportDb::from_csv(&bytes) {

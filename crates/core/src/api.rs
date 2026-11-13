@@ -36,7 +36,10 @@ pub fn router(app: Arc<App>) -> Router {
     Router::new()
         .route("/api/info", get(info))
         .route("/api/trackers", get(list_trackers).post(create_tracker))
-        .route("/api/trackers/{id}", get(get_tracker).put(update_tracker).delete(delete_tracker))
+        .route(
+            "/api/trackers/{id}",
+            get(get_tracker).put(update_tracker).delete(delete_tracker),
+        )
         .route("/api/trackers/{id}/test-alert", post(test_alert))
         .route("/api/state", get(state))
         .route("/api/stream", get(stream_sse))
@@ -65,21 +68,34 @@ fn ct_eq(a: &str, b: &str) -> bool {
 
 fn cookie_token(h: &HeaderMap) -> Option<String> {
     let c = h.get(header::COOKIE)?.to_str().ok()?;
-    c.split(';').filter_map(|p| p.trim().strip_prefix("am_token=")).next().map(String::from)
+    c.split(';')
+        .filter_map(|p| p.trim().strip_prefix("am_token="))
+        .next()
+        .map(String::from)
 }
 
 async fn guard(State(app): S, req: Request, next: Next) -> Response {
     // DNS-rebinding protection for the loopback desktop server.
     if app.opts.mode == "desktop" {
-        let host = req.headers().get(header::HOST).and_then(|h| h.to_str().ok()).unwrap_or("");
+        let host = req
+            .headers()
+            .get(header::HOST)
+            .and_then(|h| h.to_str().ok())
+            .unwrap_or("");
         let name = host.rsplit_once(':').map(|x| x.0).unwrap_or(host);
         if !matches!(name, "127.0.0.1" | "localhost" | "[::1]") {
             return StatusCode::FORBIDDEN.into_response();
         }
     }
-    let Some(token) = app.opts.access_token.clone() else { return next.run(req).await };
+    let Some(token) = app.opts.access_token.clone() else {
+        return next.run(req).await;
+    };
     let h = req.headers();
-    let bearer = h.get(header::AUTHORIZATION).and_then(|v| v.to_str().ok()).and_then(|v| v.strip_prefix("Bearer ")).map(String::from);
+    let bearer = h
+        .get(header::AUTHORIZATION)
+        .and_then(|v| v.to_str().ok())
+        .and_then(|v| v.strip_prefix("Bearer "))
+        .map(String::from);
     let query_tok = req
         .uri()
         .query()
@@ -91,13 +107,19 @@ async fn guard(State(app): S, req: Request, next: Next) -> Response {
         if query_tok.is_some() {
             resp.headers_mut().insert(
                 header::SET_COOKIE,
-                format!("am_token={token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=31536000").parse().unwrap(),
+                format!("am_token={token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=31536000")
+                    .parse()
+                    .unwrap(),
             );
         }
         return resp;
     }
     if req.uri().path().starts_with("/api/") {
-        return (StatusCode::UNAUTHORIZED, Json(json!({"error":"unauthorized"}))).into_response();
+        return (
+            StatusCode::UNAUTHORIZED,
+            Json(json!({"error":"unauthorized"})),
+        )
+            .into_response();
     }
     (
         StatusCode::UNAUTHORIZED,
@@ -146,7 +168,9 @@ fn validate(app: &App, t: &mut Tracker) -> Result<(), (StatusCode, Json<Value>)>
             }
             Target::Hex(h)
         }
-        Target::Reg(r) | Target::Callsign(r) if r.trim().is_empty() || r.len() > 12 => return Err(bad("aircraft identifier is required")),
+        Target::Reg(r) | Target::Callsign(r) if r.trim().is_empty() || r.len() > 12 => {
+            return Err(bad("aircraft identifier is required"))
+        }
         Target::Reg(r) => Target::Reg(r.trim().to_uppercase()),
         Target::Callsign(c) => Target::Callsign(c.trim().to_uppercase()),
     };
@@ -163,7 +187,10 @@ fn validate(app: &App, t: &mut Tracker) -> Result<(), (StatusCode, Json<Value>)>
         }
     }
     let c = &t.color;
-    if !(c.starts_with('#') && (4..=9).contains(&c.len()) && c[1..].chars().all(|x| x.is_ascii_hexdigit())) {
+    if !(c.starts_with('#')
+        && (4..=9).contains(&c.len())
+        && c[1..].chars().all(|x| x.is_ascii_hexdigit()))
+    {
         t.color = "#3b82f6".into();
     }
     let ap = app.airport_db().get(&t.airport).map(|a| a.ident.clone());
@@ -183,14 +210,21 @@ fn validate(app: &App, t: &mut Tracker) -> Result<(), (StatusCode, Json<Value>)>
     Ok(())
 }
 
-async fn create_tracker(State(app): S, Json(mut t): Json<Tracker>) -> Result<(StatusCode, Json<Tracker>), (StatusCode, Json<Value>)> {
+async fn create_tracker(
+    State(app): S,
+    Json(mut t): Json<Tracker>,
+) -> Result<(StatusCode, Json<Tracker>), (StatusCode, Json<Value>)> {
     t.id = uuid::Uuid::new_v4().to_string();
     validate(&app, &mut t)?;
     app.store.upsert_tracker(&t).map_err(db_err)?;
     app.wake.notify_one();
     Ok((StatusCode::CREATED, Json(t)))
 }
-async fn update_tracker(State(app): S, Path(id): Path<String>, Json(mut t): Json<Tracker>) -> ApiResult<Tracker> {
+async fn update_tracker(
+    State(app): S,
+    Path(id): Path<String>,
+    Json(mut t): Json<Tracker>,
+) -> ApiResult<Tracker> {
     if app.store.get_tracker(&id).map_err(db_err)?.is_none() {
         return Err(err(StatusCode::NOT_FOUND, "no such tracker"));
     }
@@ -200,7 +234,10 @@ async fn update_tracker(State(app): S, Path(id): Path<String>, Json(mut t): Json
     app.wake.notify_one();
     Ok(Json(t))
 }
-async fn delete_tracker(State(app): S, Path(id): Path<String>) -> Result<StatusCode, (StatusCode, Json<Value>)> {
+async fn delete_tracker(
+    State(app): S,
+    Path(id): Path<String>,
+) -> Result<StatusCode, (StatusCode, Json<Value>)> {
     if app.store.delete_tracker(&id).map_err(db_err)? {
         app.states.write().unwrap().remove(&id);
         app.publish_state();
@@ -211,7 +248,11 @@ async fn delete_tracker(State(app): S, Path(id): Path<String>) -> Result<StatusC
 }
 
 async fn test_alert(State(app): S, Path(id): Path<String>) -> ApiResult<Value> {
-    let t = app.store.get_tracker(&id).map_err(db_err)?.ok_or_else(|| err(StatusCode::NOT_FOUND, "no such tracker"))?;
+    let t = app
+        .store
+        .get_tracker(&id)
+        .map_err(db_err)?
+        .ok_or_else(|| err(StatusCode::NOT_FOUND, "no such tracker"))?;
     let e = Event {
         id: 0,
         tracker_id: t.id.clone(),
@@ -227,7 +268,9 @@ async fn test_alert(State(app): S, Path(id): Path<String>) -> ApiResult<Value> {
         alert: true,
     };
     let title = format!("TEST: {}", e.headline());
-    let res = app.notify(&t.channels, &title, &e.body(), &app.settings()).await;
+    let res = app
+        .notify(&t.channels, &title, &e.body(), &app.settings())
+        .await;
     Ok(Json(json!({ "results": res })))
 }
 
@@ -240,7 +283,8 @@ async fn stream_sse(State(app): S) -> Sse<impl Stream<Item = Result<SseEvent, In
     let (states, errors) = app.state_snapshot();
     let first = UiMsg::State { states, errors };
     let rx = BroadcastStream::new(app.tx.subscribe());
-    let s = stream::once(async move { Ok::<_, Infallible>(first) }).chain(rx.filter_map(|m| async move { m.ok().map(Ok) }));
+    let s = stream::once(async move { Ok::<_, Infallible>(first) })
+        .chain(rx.filter_map(|m| async move { m.ok().map(Ok) }));
     Sse::new(s.map(|m| {
         let m = m.unwrap();
         let name = match &m {
@@ -248,7 +292,9 @@ async fn stream_sse(State(app): S) -> Sse<impl Stream<Item = Result<SseEvent, In
             UiMsg::Event { .. } => "event",
             UiMsg::Alert { .. } => "alert",
         };
-        Ok(SseEvent::default().event(name).data(serde_json::to_string(&m).unwrap_or_default()))
+        Ok(SseEvent::default()
+            .event(name)
+            .data(serde_json::to_string(&m).unwrap_or_default()))
     }))
     .keep_alive(KeepAlive::default())
 }
@@ -259,12 +305,24 @@ struct EvQ {
     limit: Option<usize>,
 }
 async fn events(State(app): S, QS(q): QS<EvQ>) -> ApiResult<Vec<Event>> {
-    app.store.events(q.tracker.as_deref(), q.limit.unwrap_or(200).min(5000)).map(Json).map_err(db_err)
+    app.store
+        .events(q.tracker.as_deref(), q.limit.unwrap_or(200).min(5000))
+        .map(Json)
+        .map_err(db_err)
 }
 async fn events_csv(State(app): S, QS(q): QS<EvQ>) -> Result<Response, (StatusCode, Json<Value>)> {
-    let ev = app.store.events(q.tracker.as_deref(), q.limit.unwrap_or(5000).min(50_000)).map_err(db_err)?;
+    let ev = app
+        .store
+        .events(q.tracker.as_deref(), q.limit.unwrap_or(5000).min(50_000))
+        .map_err(db_err)?;
     Ok((
-        [(header::CONTENT_TYPE, "text/csv; charset=utf-8"), (header::CONTENT_DISPOSITION, "attachment; filename=\"aircraft-monitor-events.csv\"")],
+        [
+            (header::CONTENT_TYPE, "text/csv; charset=utf-8"),
+            (
+                header::CONTENT_DISPOSITION,
+                "attachment; filename=\"aircraft-monitor-events.csv\"",
+            ),
+        ],
         crate::store::events_to_csv(&ev),
     )
         .into_response())
@@ -277,12 +335,23 @@ async fn put_settings(State(app): S, Json(mut s): Json<Settings>) -> ApiResult<S
     if !(5..=3600).contains(&s.poll_interval_s) {
         return Err(bad("poll interval must be 5–3600 s"));
     }
-    let srv = s.notifications.ntfy.server.trim().trim_end_matches('/').to_string();
+    let srv = s
+        .notifications
+        .ntfy
+        .server
+        .trim()
+        .trim_end_matches('/')
+        .to_string();
     if !srv.is_empty() && !(srv.starts_with("https://") || srv.starts_with("http://")) {
         return Err(bad("ntfy server must start with http:// or https://"));
     }
     s.notifications.ntfy.server = srv;
-    s.blocklist = s.blocklist.iter().map(|b| b.trim().to_string()).filter(|b| !b.is_empty()).collect();
+    s.blocklist = s
+        .blocklist
+        .iter()
+        .map(|b| b.trim().to_string())
+        .filter(|b| !b.is_empty())
+        .collect();
     app.store.set_settings(&s).map_err(db_err)?;
     app.rebuild_chain();
     app.wake.notify_one();
@@ -290,29 +359,43 @@ async fn put_settings(State(app): S, Json(mut s): Json<Settings>) -> ApiResult<S
 }
 
 async fn list_secrets(State(app): S) -> Json<Value> {
-    let m: serde_json::Map<String, Value> = crate::secrets::KNOWN.iter().map(|k| (k.to_string(), json!(app.secrets.has(k)))).collect();
+    let m: serde_json::Map<String, Value> = crate::secrets::KNOWN
+        .iter()
+        .map(|k| (k.to_string(), json!(app.secrets.has(k))))
+        .collect();
     Json(Value::Object(m))
 }
 #[derive(Deserialize)]
 struct SecretBody {
     value: String,
 }
-async fn set_secret(State(app): S, Path(name): Path<String>, Json(b): Json<SecretBody>) -> Result<StatusCode, (StatusCode, Json<Value>)> {
+async fn set_secret(
+    State(app): S,
+    Path(name): Path<String>,
+    Json(b): Json<SecretBody>,
+) -> Result<StatusCode, (StatusCode, Json<Value>)> {
     if !crate::secrets::KNOWN.contains(&name.as_str()) {
         return Err(bad("unknown secret name"));
     }
     if b.value.is_empty() || b.value.len() > 2048 {
         return Err(bad("secret value must be 1–2048 characters"));
     }
-    app.secrets.set(&name, &b.value).map_err(|_| err(StatusCode::INTERNAL_SERVER_ERROR, "could not store secret"))?;
+    app.secrets
+        .set(&name, &b.value)
+        .map_err(|_| err(StatusCode::INTERNAL_SERVER_ERROR, "could not store secret"))?;
     app.rebuild_chain();
     Ok(StatusCode::NO_CONTENT)
 }
-async fn delete_secret(State(app): S, Path(name): Path<String>) -> Result<StatusCode, (StatusCode, Json<Value>)> {
+async fn delete_secret(
+    State(app): S,
+    Path(name): Path<String>,
+) -> Result<StatusCode, (StatusCode, Json<Value>)> {
     if !crate::secrets::KNOWN.contains(&name.as_str()) {
         return Err(bad("unknown secret name"));
     }
-    app.secrets.delete(&name).map_err(|_| err(StatusCode::INTERNAL_SERVER_ERROR, "could not delete secret"))?;
+    app.secrets
+        .delete(&name)
+        .map_err(|_| err(StatusCode::INTERNAL_SERVER_ERROR, "could not delete secret"))?;
     app.rebuild_chain();
     Ok(StatusCode::NO_CONTENT)
 }
@@ -327,7 +410,10 @@ async fn search_airports(State(app): S, QS(q): QS<AQ>) -> Json<Value> {
     Json(json!(db.search(&q.q, q.limit.unwrap_or(10).min(50))))
 }
 async fn get_airport(State(app): S, Path(ident): Path<String>) -> ApiResult<Value> {
-    app.airport_db().get(&ident).map(|a| Json(json!(a))).ok_or_else(|| err(StatusCode::NOT_FOUND, "unknown airport"))
+    app.airport_db()
+        .get(&ident)
+        .map(|a| Json(json!(a)))
+        .ok_or_else(|| err(StatusCode::NOT_FOUND, "unknown airport"))
 }
 
 #[derive(Deserialize)]
@@ -340,7 +426,10 @@ async fn traffic(State(app): S, QS(q): QS<TQ>) -> ApiResult<Value> {
     if !(-90.0..=90.0).contains(&q.lat) || !(-180.0..=180.0).contains(&q.lon) {
         return Err(bad("bad coordinates"));
     }
-    let (list, provider) = app.traffic(q.lat, q.lon, q.radius.unwrap_or(40.0).clamp(1.0, 250.0)).await.map_err(|e| err(StatusCode::BAD_GATEWAY, e))?;
+    let (list, provider) = app
+        .traffic(q.lat, q.lon, q.radius.unwrap_or(40.0).clamp(1.0, 250.0))
+        .await
+        .map_err(|e| err(StatusCode::BAD_GATEWAY, e))?;
     Ok(Json(json!({ "provider": provider, "aircraft": *list })))
 }
 
@@ -372,6 +461,13 @@ struct NT {
     channel: ChannelKind,
 }
 async fn notify_test(State(app): S, Json(b): Json<NT>) -> Json<Value> {
-    let res = app.notify(&[b.channel], "TEST: Aircraft Monitor", "If you can read this, this channel works.", &app.settings()).await;
+    let res = app
+        .notify(
+            &[b.channel],
+            "TEST: Aircraft Monitor",
+            "If you can read this, this channel works.",
+            &app.settings(),
+        )
+        .await;
     Json(json!({ "results": res }))
 }

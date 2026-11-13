@@ -18,9 +18,16 @@ use tokio::sync::{broadcast, Notify};
 #[derive(Debug, Clone, Serialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum UiMsg {
-    State { states: Vec<TrackerState>, errors: HashMap<String, String> },
-    Event { event: Event },
-    Alert { alert: UiAlert },
+    State {
+        states: Vec<TrackerState>,
+        errors: HashMap<String, String>,
+    },
+    Event {
+        event: Event,
+    },
+    Alert {
+        alert: UiAlert,
+    },
 }
 
 #[derive(Clone)]
@@ -34,6 +41,8 @@ pub struct AppOptions {
     pub download_airports: bool,
 }
 
+type CachedTraffic = (Instant, Arc<Vec<Aircraft>>, &'static str);
+
 pub struct App {
     pub opts: AppOptions,
     pub store: Store,
@@ -46,12 +55,16 @@ pub struct App {
     pub notifier: Notifier,
     pub tx: broadcast::Sender<UiMsg>,
     pub wake: Notify,
-    traffic_cache: RwLock<HashMap<String, (Instant, Arc<Vec<Aircraft>>, &'static str)>>,
+    traffic_cache: RwLock<HashMap<String, CachedTraffic>>,
 }
 
 pub fn http_client() -> reqwest::Client {
     reqwest::Client::builder()
-        .user_agent(concat!("aircraft-monitor/", env!("CARGO_PKG_VERSION"), " (+https://github.com/OWNER/aircraft-monitor)"))
+        .user_agent(concat!(
+            "aircraft-monitor/",
+            env!("CARGO_PKG_VERSION"),
+            " (+https://github.com/OWNER/aircraft-monitor)"
+        ))
         .timeout(Duration::from_secs(12))
         .build()
         .expect("http client")
@@ -95,7 +108,13 @@ impl App {
 
     pub fn rebuild_chain(&self) {
         let s = self.settings();
-        let chain = Chain::from_settings(&s.providers, &self.http, self.secrets.clone(), self.opts.mock_center, self.opts.mock_scale);
+        let chain = Chain::from_settings(
+            &s.providers,
+            &self.http,
+            self.secrets.clone(),
+            self.opts.mock_center,
+            self.opts.mock_scale,
+        );
         *self.chain.write().unwrap() = Arc::new(chain);
         self.traffic_cache.write().unwrap().clear();
     }
@@ -129,13 +148,13 @@ impl App {
         let db = self.airport_db();
 
         // dedupe identical queries across trackers
-        let mut results: HashMap<String, Result<(Vec<Aircraft>, &'static str), String>> = HashMap::new();
+        let mut results: HashMap<String, Result<(Vec<Aircraft>, &'static str), String>> =
+            HashMap::new();
         for t in trackers.iter().filter(|t| t.enabled) {
             let q = Self::query_for(t);
             let k = q.key();
-            if !results.contains_key(&k) {
-                let r = chain.fetch(&q).await.map_err(|e| e.to_string());
-                results.insert(k, r);
+            if let std::collections::hash_map::Entry::Vacant(slot) = results.entry(k) {
+                slot.insert(chain.fetch(&q).await.map_err(|e| e.to_string()));
             }
         }
 
@@ -144,7 +163,13 @@ impl App {
         let mut errors = HashMap::new();
         let mut live: HashMap<String, TrackerState> = HashMap::new();
         for t in &trackers {
-            let prev = self.states.read().unwrap().get(&t.id).cloned().unwrap_or_default();
+            let prev = self
+                .states
+                .read()
+                .unwrap()
+                .get(&t.id)
+                .cloned()
+                .unwrap_or_default();
             let Some(ap) = db.get(&t.airport) else {
                 errors.insert(t.id.clone(), format!("unknown airport {}", t.airport));
                 continue;
@@ -154,10 +179,20 @@ impl App {
                     Some(Ok((list, p))) => {
                         let best = list
                             .iter()
-                            .filter(|a| t.target.matches(a) || matches!(t.target, Target::Callsign(_)))
-                            .filter(|a| !settings.is_blocked(&a.hex, a.reg.as_deref(), a.callsign.as_deref()))
+                            .filter(|a| {
+                                t.target.matches(a) || matches!(t.target, Target::Callsign(_))
+                            })
+                            .filter(|a| {
+                                !settings.is_blocked(
+                                    &a.hex,
+                                    a.reg.as_deref(),
+                                    a.callsign.as_deref(),
+                                )
+                            })
                             .filter(|a| a.position().is_some())
-                            .min_by(|a, b| a.seen_s.unwrap_or(0.0).total_cmp(&b.seen_s.unwrap_or(0.0)));
+                            .min_by(|a, b| {
+                                a.seen_s.unwrap_or(0.0).total_cmp(&b.seen_s.unwrap_or(0.0))
+                            });
                         (best.cloned(), Some(*p))
                     }
                     Some(Err(e)) => {
@@ -169,7 +204,17 @@ impl App {
             } else {
                 (None, None)
             };
-            let (st, events) = evaluate(t, AirportPos { lat: ap.lat, lon: ap.lon }, &prev, obs.as_ref(), provider, now);
+            let (st, events) = evaluate(
+                t,
+                AirportPos {
+                    lat: ap.lat,
+                    lon: ap.lon,
+                },
+                &prev,
+                obs.as_ref(),
+                provider,
+                now,
+            );
             live.insert(t.id.clone(), st);
             for mut e in events {
                 if let Err(err) = self.store.add_event(&mut e) {
@@ -178,7 +223,9 @@ impl App {
                 let _ = self.tx.send(UiMsg::Event { event: e.clone() });
                 if should_deliver(t, &e, local_minute_of_day()) {
                     let channels = t.channels.clone();
-                    let _ = self.notify(&channels, &e.headline(), &e.body(), &settings).await;
+                    let _ = self
+                        .notify(&channels, &e.headline(), &e.body(), &settings)
+                        .await;
                 }
                 all_events.push(e);
             }
@@ -195,7 +242,13 @@ impl App {
         all_events
     }
 
-    pub async fn notify(&self, channels: &[ChannelKind], title: &str, body: &str, settings: &Settings) -> Vec<ChannelResult> {
+    pub async fn notify(
+        &self,
+        channels: &[ChannelKind],
+        title: &str,
+        body: &str,
+        settings: &Settings,
+    ) -> Vec<ChannelResult> {
         let tx = self.tx.clone();
         self.notifier
             .send(channels, title, body, settings, &move |alert| {
@@ -205,11 +258,22 @@ impl App {
     }
 
     pub fn state_snapshot(&self) -> (Vec<TrackerState>, HashMap<String, String>) {
-        let order: Vec<String> = self.store.list_trackers().unwrap_or_default().into_iter().map(|t| t.id).collect();
+        let order: Vec<String> = self
+            .store
+            .list_trackers()
+            .unwrap_or_default()
+            .into_iter()
+            .map(|t| t.id)
+            .collect();
         let st = self.states.read().unwrap();
         let mut v: Vec<TrackerState> = order
             .iter()
-            .map(|id| st.get(id).cloned().unwrap_or(TrackerState { tracker_id: id.clone(), ..Default::default() }))
+            .map(|id| {
+                st.get(id).cloned().unwrap_or(TrackerState {
+                    tracker_id: id.clone(),
+                    ..Default::default()
+                })
+            })
             .collect();
         v.shrink_to_fit();
         (v, self.errors.read().unwrap().clone())
@@ -221,8 +285,17 @@ impl App {
     }
 
     /// Area traffic for the map, cached for 8 s so many browser tabs don't multiply API calls.
-    pub async fn traffic(&self, lat: f64, lon: f64, radius_nm: f64) -> Result<(Arc<Vec<Aircraft>>, &'static str), String> {
-        let q = Query::Point { lat, lon, radius_nm };
+    pub async fn traffic(
+        &self,
+        lat: f64,
+        lon: f64,
+        radius_nm: f64,
+    ) -> Result<(Arc<Vec<Aircraft>>, &'static str), String> {
+        let q = Query::Point {
+            lat,
+            lon,
+            radius_nm,
+        };
         let key = q.key();
         if let Some((t, v, p)) = self.traffic_cache.read().unwrap().get(&key) {
             if t.elapsed() < Duration::from_secs(8) {
@@ -237,7 +310,10 @@ impl App {
             .filter(|a| !settings.is_blocked(&a.hex, a.reg.as_deref(), a.callsign.as_deref()))
             .collect();
         let v = Arc::new(list);
-        self.traffic_cache.write().unwrap().insert(key, (Instant::now(), v.clone(), p));
+        self.traffic_cache
+            .write()
+            .unwrap()
+            .insert(key, (Instant::now(), v.clone(), p));
         Ok((v, p))
     }
 

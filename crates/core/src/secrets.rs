@@ -41,7 +41,10 @@ impl FileSecrets {
             .ok()
             .and_then(|b| serde_json::from_slice(&b).ok())
             .unwrap_or_default();
-        FileSecrets { path, cache: Mutex::new(cache) }
+        FileSecrets {
+            path,
+            cache: Mutex::new(cache),
+        }
     }
     fn persist(&self, map: &BTreeMap<String, String>) -> Result<(), String> {
         use std::io::Write;
@@ -106,8 +109,14 @@ mod tests {
         let p = dir.join("secrets.json");
         let s = FileSecrets::open(p.clone());
         s.set("ntfy_token", "tk_supersecret").unwrap();
-        assert_eq!(std::fs::metadata(&p).unwrap().permissions().mode() & 0o777, 0o600);
-        assert_eq!(FileSecrets::open(p).get("ntfy_token").as_deref(), Some("tk_supersecret"));
+        assert_eq!(
+            std::fs::metadata(&p).unwrap().permissions().mode() & 0o777,
+            0o600
+        );
+        assert_eq!(
+            FileSecrets::open(p).get("ntfy_token").as_deref(),
+            Some("tk_supersecret")
+        );
         assert!(!format!("{s:?}").contains("supersecret"));
         std::fs::remove_dir_all(dir).ok();
     }

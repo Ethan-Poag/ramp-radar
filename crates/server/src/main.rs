@@ -36,11 +36,17 @@ struct Cli {
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt()
-        .with_env_filter(tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()))
+        .with_env_filter(
+            tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()),
+        )
         .init();
     let cli = Cli::parse();
 
-    let data_dir = cli.data_dir.unwrap_or_else(|| dirs::data_dir().unwrap_or_else(|| PathBuf::from(".")).join("aircraft-monitor"));
+    let data_dir = cli.data_dir.unwrap_or_else(|| {
+        dirs::data_dir()
+            .unwrap_or_else(|| PathBuf::from("."))
+            .join("aircraft-monitor")
+    });
     std::fs::create_dir_all(&data_dir).expect("create data dir");
     let store = Store::open(&data_dir.join("monitor.db")).expect("open database");
     let secrets = Arc::new(FileSecrets::open(data_dir.join("secrets.json")));
@@ -81,7 +87,11 @@ async fn main() {
     }
     app.spawn_poller();
     let listener = tokio::net::TcpListener::bind(cli.bind).await.expect("bind");
-    tracing::info!("Aircraft Monitor listening on http://{} (data: {})", cli.bind, data_dir.display());
+    tracing::info!(
+        "Aircraft Monitor listening on http://{} (data: {})",
+        cli.bind,
+        data_dir.display()
+    );
     axum::serve(listener, api::router(app))
         .with_graceful_shutdown(async {
             let _ = tokio::signal::ctrl_c().await;

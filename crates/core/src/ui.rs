@@ -19,12 +19,29 @@ pub async fn static_handler(uri: Uri) -> Response {
     match Assets::get(path) {
         Some(f) => {
             let mime = mime_guess::from_path(path).first_or_octet_stream();
-            let cache = if path.starts_with("assets/") { "public, max-age=31536000, immutable" } else { "no-cache" };
-            ([(header::CONTENT_TYPE, mime.to_string()), (header::CACHE_CONTROL, cache.to_string())], f.data.into_owned()).into_response()
+            let cache = if path.starts_with("assets/") {
+                "public, max-age=31536000, immutable"
+            } else {
+                "no-cache"
+            };
+            (
+                [
+                    (header::CONTENT_TYPE, mime.to_string()),
+                    (header::CACHE_CONTROL, cache.to_string()),
+                ],
+                f.data.into_owned(),
+            )
+                .into_response()
         }
-        None if path.starts_with("api/") || path.contains('.') => StatusCode::NOT_FOUND.into_response(),
+        None if path.starts_with("api/") || path.contains('.') => {
+            StatusCode::NOT_FOUND.into_response()
+        }
         None => match Assets::get("index.html") {
-            Some(f) => ([(header::CONTENT_TYPE, "text/html".to_string())], f.data.into_owned()).into_response(),
+            Some(f) => (
+                [(header::CONTENT_TYPE, "text/html".to_string())],
+                f.data.into_owned(),
+            )
+                .into_response(),
             None => ([(header::CONTENT_TYPE, "text/html")], STUB).into_response(),
         },
     }

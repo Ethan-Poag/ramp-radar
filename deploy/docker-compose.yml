@@ -1,0 +1,11 @@
+services:
+  aircraft-monitor:
+    build: { context: .., dockerfile: deploy/Dockerfile }
+    restart: unless-stopped
+    ports: ["8080:8080"]
+    environment:
+      # Strongly recommended when exposed on your LAN:
+      AM_ACCESS_TOKEN: "${AM_ACCESS_TOKEN:-}"
+    volumes: ["am-data:/data"]
+volumes:
+  am-data:

@@ -75,7 +75,7 @@ pub fn icao_to_n(hex: &str) -> Option<String> {
     s.push((b'1' + (off / S1) as u8) as char);
     off %= S1;
     let sizes = [S2, S3, S4];
-    for lvl in 0..3 {
+    for size in sizes {
         if off == 0 {
             return Some(s);
         }
@@ -90,8 +90,8 @@ pub fn icao_to_n(hex: &str) -> Option<String> {
             return Some(s);
         }
         off -= SUFFIX;
-        s.push((b'0' + (off / sizes[lvl]) as u8) as char);
-        off %= sizes[lvl];
+        s.push((b'0' + (off / size) as u8) as char);
+        off %= size;
     }
     // after 4 digits
     if off == 0 {
@@ -144,7 +144,9 @@ mod tests {
     }
     #[test]
     fn invalid_regs() {
-        for bad in ["", "N", "N0", "N1I", "N1O", "N123456", "G-ABCD", "N1ABC", "N12A3", "N1234AB", "12345"] {
+        for bad in [
+            "", "N", "N0", "N1I", "N1O", "N123456", "G-ABCD", "N1ABC", "N12A3", "N1234AB", "12345",
+        ] {
             assert!(n_to_icao(bad).is_none(), "{bad}");
         }
     }

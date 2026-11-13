@@ -21,11 +21,51 @@ struct Spec {
 }
 
 const FLEET: &[Spec] = &[
-    Spec { hex: "a061d9", reg: "N12345", callsign: "MOCK1", type_code: "C172", bearing: 90.0, gs: 110.0, phase: 1100.0 },
-    Spec { hex: "a00001", reg: "N1", callsign: "MOCK2", type_code: "B738", bearing: 200.0, gs: 220.0, phase: 0.0 },
-    Spec { hex: "a96ffe", reg: "N707QS", callsign: "MOCK3", type_code: "CL35", bearing: 315.0, gs: 280.0, phase: 600.0 },
-    Spec { hex: "ac82ec", reg: "N9999", callsign: "MOCK4", type_code: "PC12", bearing: 45.0, gs: 160.0, phase: 1500.0 },
-    Spec { hex: "a4f123", reg: "N5555A", callsign: "MOCK5", type_code: "SR22", bearing: 150.0, gs: 150.0, phase: 300.0 },
+    Spec {
+        hex: "a061d9",
+        reg: "N12345",
+        callsign: "MOCK1",
+        type_code: "C172",
+        bearing: 90.0,
+        gs: 110.0,
+        phase: 1100.0,
+    },
+    Spec {
+        hex: "a00001",
+        reg: "N1",
+        callsign: "MOCK2",
+        type_code: "B738",
+        bearing: 200.0,
+        gs: 220.0,
+        phase: 0.0,
+    },
+    Spec {
+        hex: "a96ffe",
+        reg: "N707QS",
+        callsign: "MOCK3",
+        type_code: "CL35",
+        bearing: 315.0,
+        gs: 280.0,
+        phase: 600.0,
+    },
+    Spec {
+        hex: "ac82ec",
+        reg: "N9999",
+        callsign: "MOCK4",
+        type_code: "PC12",
+        bearing: 45.0,
+        gs: 160.0,
+        phase: 1500.0,
+    },
+    Spec {
+        hex: "a4f123",
+        reg: "N5555A",
+        callsign: "MOCK5",
+        type_code: "SR22",
+        bearing: 150.0,
+        gs: 150.0,
+        phase: 300.0,
+    },
 ];
 
 const START_NM: f64 = 60.0;
@@ -33,7 +73,11 @@ const GROUND_SECS: f64 = 60.0;
 
 impl MockProvider {
     pub fn new(center: (f64, f64), scale: f64) -> Self {
-        MockProvider { center, scale: scale.max(0.1), start: Instant::now() }
+        MockProvider {
+            center,
+            scale: scale.max(0.1),
+            start: Instant::now(),
+        }
     }
 
     fn state_at(&self, s: &Spec, sim_secs: f64) -> Aircraft {
@@ -42,12 +86,24 @@ impl MockProvider {
         let t = (sim_secs + s.phase).rem_euclid(cycle);
         let (dist, track, alt, gs, ground) = if t < leg {
             let d = START_NM - s.gs * t / 3600.0;
-            (d, (s.bearing + 180.0) % 360.0, (d * 300.0).clamp(0.0, 12000.0) as i32 + 400, s.gs, false)
+            (
+                d,
+                (s.bearing + 180.0) % 360.0,
+                (d * 300.0).clamp(0.0, 12000.0) as i32 + 400,
+                s.gs,
+                false,
+            )
         } else if t < leg + GROUND_SECS {
             (0.3, (s.bearing + 180.0) % 360.0, 0, 8.0, true)
         } else {
             let d = s.gs * (t - leg - GROUND_SECS) / 3600.0;
-            (d.max(0.4), s.bearing, ((d * 300.0).clamp(0.0, 12000.0) as i32) + 300, s.gs, false)
+            (
+                d.max(0.4),
+                s.bearing,
+                ((d * 300.0).clamp(0.0, 12000.0) as i32) + 300,
+                s.gs,
+                false,
+            )
         };
         let (lat, lon) = destination(self.center.0, self.center.1, s.bearing, dist);
         Aircraft {
@@ -108,7 +164,16 @@ mod tests {
     #[tokio::test]
     async fn query_by_reg() {
         let m = MockProvider::new((0.0, 0.0), 1.0);
-        assert_eq!(m.fetch(&Query::Reg("N12345".into())).await.unwrap().len(), 1);
-        assert_eq!(m.fetch(&Query::Callsign("MOCK3".into())).await.unwrap().len(), 1);
+        assert_eq!(
+            m.fetch(&Query::Reg("N12345".into())).await.unwrap().len(),
+            1
+        );
+        assert_eq!(
+            m.fetch(&Query::Callsign("MOCK3".into()))
+                .await
+                .unwrap()
+                .len(),
+            1
+        );
     }
 }

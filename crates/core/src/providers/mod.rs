@@ -32,7 +32,11 @@ impl Query {
             Query::Hex(h) => format!("hex:{}", h.to_lowercase()),
             Query::Reg(r) => format!("reg:{}", r.to_uppercase()),
             Query::Callsign(c) => format!("cs:{}", c.to_uppercase()),
-            Query::Point { lat, lon, radius_nm } => format!("pt:{lat:.3},{lon:.3},{radius_nm:.0}"),
+            Query::Point {
+                lat,
+                lon,
+                radius_nm,
+            } => format!("pt:{lat:.3},{lon:.3},{radius_nm:.0}"),
         }
     }
 }
@@ -94,7 +98,11 @@ impl Chain {
         Chain {
             slots: providers
                 .into_iter()
-                .map(|p| Slot { p, state: Default::default(), gate: tokio::sync::Mutex::new(None) })
+                .map(|p| Slot {
+                    p,
+                    state: Default::default(),
+                    gate: tokio::sync::Mutex::new(None),
+                })
                 .collect(),
         }
     }
@@ -109,22 +117,38 @@ impl Chain {
         let mut v: Vec<Arc<dyn Provider>> = Vec::new();
         for c in cfg.iter().filter(|c| c.enabled()) {
             match c {
-                ProviderConfig::Local { url, .. } if !url.trim().is_empty() => {
-                    v.push(Arc::new(LocalReceiver::new(http.clone(), url.trim().to_string())))
-                }
+                ProviderConfig::Local { url, .. } if !url.trim().is_empty() => v.push(Arc::new(
+                    LocalReceiver::new(http.clone(), url.trim().to_string()),
+                )),
                 ProviderConfig::Local { .. } => {}
-                ProviderConfig::AdsbLol { .. } => v.push(Arc::new(AdsbV2::new(Flavor::AdsbLol, http.clone(), secrets.clone()))),
-                ProviderConfig::AirplanesLive { .. } => {
-                    v.push(Arc::new(AdsbV2::new(Flavor::AirplanesLive, http.clone(), secrets.clone())))
+                ProviderConfig::AdsbLol { .. } => v.push(Arc::new(AdsbV2::new(
+                    Flavor::AdsbLol,
+                    http.clone(),
+                    secrets.clone(),
+                ))),
+                ProviderConfig::AirplanesLive { .. } => v.push(Arc::new(AdsbV2::new(
+                    Flavor::AirplanesLive,
+                    http.clone(),
+                    secrets.clone(),
+                ))),
+                ProviderConfig::AdsbFi { .. } => v.push(Arc::new(AdsbV2::new(
+                    Flavor::AdsbFi,
+                    http.clone(),
+                    secrets.clone(),
+                ))),
+                ProviderConfig::AdsbExchange { .. } => v.push(Arc::new(AdsbV2::new(
+                    Flavor::AdsbExchange,
+                    http.clone(),
+                    secrets.clone(),
+                ))),
+                ProviderConfig::OpenSky { client_id, .. } => v.push(Arc::new(OpenSky::new(
+                    http.clone(),
+                    client_id.clone(),
+                    secrets.clone(),
+                ))),
+                ProviderConfig::Mock { .. } => {
+                    v.push(Arc::new(MockProvider::new(mock_center, mock_scale)))
                 }
-                ProviderConfig::AdsbFi { .. } => v.push(Arc::new(AdsbV2::new(Flavor::AdsbFi, http.clone(), secrets.clone()))),
-                ProviderConfig::AdsbExchange { .. } => {
-                    v.push(Arc::new(AdsbV2::new(Flavor::AdsbExchange, http.clone(), secrets.clone())))
-                }
-                ProviderConfig::OpenSky { client_id, .. } => {
-                    v.push(Arc::new(OpenSky::new(http.clone(), client_id.clone(), secrets.clone())))
-                }
-                ProviderConfig::Mock { .. } => v.push(Arc::new(MockProvider::new(mock_center, mock_scale))),
             }
         }
         Chain::new(v)
@@ -141,11 +165,18 @@ impl Chain {
                 let st = s.state.lock().unwrap();
                 Health {
                     id: s.p.id().into(),
-                    ok: if st.last_ok.is_none() && st.last_err.is_none() { None } else { Some(st.fails == 0) },
+                    ok: if st.last_ok.is_none() && st.last_err.is_none() {
+                        None
+                    } else {
+                        Some(st.fails == 0)
+                    },
                     consecutive_failures: st.fails,
                     last_error: st.last_err.clone(),
                     last_ok_secs_ago: st.last_ok.map(|t| t.elapsed().as_secs()),
-                    backoff_secs: st.retry_at.and_then(|t| t.checked_duration_since(Instant::now())).map(|d| d.as_secs()),
+                    backoff_secs: st
+                        .retry_at
+                        .and_then(|t| t.checked_duration_since(Instant::now()))
+                        .map(|d| d.as_secs()),
                 }
             })
             .collect()
@@ -159,7 +190,12 @@ impl Chain {
         let mut last: Option<ProviderError> = None;
         let mut tried = false;
         for s in &self.slots {
-            let backing_off = s.state.lock().unwrap().retry_at.is_some_and(|t| t > Instant::now());
+            let backing_off = s
+                .state
+                .lock()
+                .unwrap()
+                .retry_at
+                .is_some_and(|t| t > Instant::now());
             if backing_off {
                 continue;
             }
@@ -171,9 +207,13 @@ impl Chain {
             }
         }
         if !tried {
-            return Err(ProviderError::Failed("all data sources are backing off after errors".into()));
+            return Err(ProviderError::Failed(
+                "all data sources are backing off after errors".into(),
+            ));
         }
-        Err(last.unwrap_or(ProviderError::Failed("no provider supports this query".into())))
+        Err(last.unwrap_or(ProviderError::Failed(
+            "no provider supports this query".into(),
+        )))
     }
 
     async fn call(&self, s: &Slot, q: &Query) -> Result<Vec<Aircraft>, ProviderError> {
@@ -234,15 +274,26 @@ mod tests {
             if self.fail {
                 Err(ProviderError::Failed("boom".into()))
             } else {
-                Ok(vec![Aircraft { hex: "abc".into(), ..Default::default() }])
+                Ok(vec![Aircraft {
+                    hex: "abc".into(),
+                    ..Default::default()
+                }])
             }
         }
     }
 
     #[tokio::test]
     async fn fails_over_and_backs_off() {
-        let a = Arc::new(Fake { id: "a", fail: true, calls: Mutex::new(0) });
-        let b = Arc::new(Fake { id: "b", fail: false, calls: Mutex::new(0) });
+        let a = Arc::new(Fake {
+            id: "a",
+            fail: true,
+            calls: Mutex::new(0),
+        });
+        let b = Arc::new(Fake {
+            id: "b",
+            fail: false,
+            calls: Mutex::new(0),
+        });
         let chain = Chain::new(vec![a.clone(), b.clone()]);
         let (v, id) = chain.fetch(&Query::Hex("abc".into())).await.unwrap();
         assert_eq!((v.len(), id), (1, "b"));
@@ -258,7 +309,11 @@ mod tests {
 
     #[tokio::test]
     async fn all_failing_is_error() {
-        let a = Arc::new(Fake { id: "a", fail: true, calls: Mutex::new(0) });
+        let a = Arc::new(Fake {
+            id: "a",
+            fail: true,
+            calls: Mutex::new(0),
+        });
         let chain = Chain::new(vec![a]);
         assert!(chain.fetch(&Query::Hex("x".into())).await.is_err());
         assert!(chain.fetch(&Query::Hex("x".into())).await.is_err()); // backing off

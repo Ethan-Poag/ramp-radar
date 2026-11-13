@@ -51,7 +51,11 @@ pub fn bearing_deg(lat1: f64, lon1: f64, lat2: f64, lon2: f64) -> f64 {
 /// Smallest absolute angle between two headings, 0..180.
 pub fn angle_diff(a: f64, b: f64) -> f64 {
     let d = (a - b).rem_euclid(360.0);
-    if d > 180.0 { 360.0 - d } else { d }
+    if d > 180.0 {
+        360.0 - d
+    } else {
+        d
+    }
 }
 
 /// Destination point given start, bearing and distance.

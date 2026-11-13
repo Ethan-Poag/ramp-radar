@@ -20,16 +20,28 @@ pub struct AdsbV2 {
 
 impl AdsbV2 {
     pub fn new(flavor: Flavor, http: reqwest::Client, secrets: Arc<dyn SecretStore>) -> Self {
-        AdsbV2 { flavor, http, secrets }
+        AdsbV2 {
+            flavor,
+            http,
+            secrets,
+        }
     }
 
     pub fn url(flavor: Flavor, q: &Query) -> String {
         let clamp = |r: f64| r.clamp(1.0, 250.0).round() as u32;
         match flavor {
             Flavor::AdsbLol | Flavor::AirplanesLive => {
-                let base = if flavor == Flavor::AdsbLol { "https://api.adsb.lol/v2" } else { "https://api.airplanes.live/v2" };
+                let base = if flavor == Flavor::AdsbLol {
+                    "https://api.adsb.lol/v2"
+                } else {
+                    "https://api.airplanes.live/v2"
+                };
                 match q {
-                    Query::Point { lat, lon, radius_nm } => format!("{base}/point/{lat:.4}/{lon:.4}/{}", clamp(*radius_nm)),
+                    Query::Point {
+                        lat,
+                        lon,
+                        radius_nm,
+                    } => format!("{base}/point/{lat:.4}/{lon:.4}/{}", clamp(*radius_nm)),
                     Query::Hex(h) => format!("{base}/hex/{h}"),
                     Query::Reg(r) => format!("{base}/reg/{r}"),
                     Query::Callsign(c) => format!("{base}/callsign/{c}"),
@@ -38,7 +50,14 @@ impl AdsbV2 {
             Flavor::AdsbFi => {
                 let base = "https://opendata.adsb.fi/api/v2";
                 match q {
-                    Query::Point { lat, lon, radius_nm } => format!("{base}/lat/{lat:.4}/lon/{lon:.4}/dist/{}", clamp(*radius_nm)),
+                    Query::Point {
+                        lat,
+                        lon,
+                        radius_nm,
+                    } => format!(
+                        "{base}/lat/{lat:.4}/lon/{lon:.4}/dist/{}",
+                        clamp(*radius_nm)
+                    ),
                     Query::Hex(h) => format!("{base}/hex/{h}"),
                     Query::Reg(r) => format!("{base}/registration/{r}"),
                     Query::Callsign(c) => format!("{base}/callsign/{c}"),
@@ -47,7 +66,14 @@ impl AdsbV2 {
             Flavor::AdsbExchange => {
                 let base = "https://adsbexchange-com1.p.rapidapi.com/v2";
                 match q {
-                    Query::Point { lat, lon, radius_nm } => format!("{base}/lat/{lat:.4}/lon/{lon:.4}/dist/{}/", clamp(*radius_nm)),
+                    Query::Point {
+                        lat,
+                        lon,
+                        radius_nm,
+                    } => format!(
+                        "{base}/lat/{lat:.4}/lon/{lon:.4}/dist/{}/",
+                        clamp(*radius_nm)
+                    ),
                     Query::Hex(h) => format!("{base}/icao/{h}/"),
                     Query::Reg(r) => format!("{base}/registration/{r}/"),
                     Query::Callsign(c) => format!("{base}/callsign/{c}/"),
@@ -59,7 +85,10 @@ impl AdsbV2 {
 
 /// Parse readsb-style JSON (`ac` or `aircraft` array).
 pub fn parse_v2(body: &Value) -> Vec<Aircraft> {
-    let arr = body.get("ac").or_else(|| body.get("aircraft")).and_then(|v| v.as_array());
+    let arr = body
+        .get("ac")
+        .or_else(|| body.get("aircraft"))
+        .and_then(|v| v.as_array());
     let Some(arr) = arr else { return vec![] };
     arr.iter().filter_map(parse_one).collect()
 }
@@ -73,7 +102,10 @@ fn num(v: &Value, k: &str) -> Option<f64> {
     }
 }
 fn text(v: &Value, k: &str) -> Option<String> {
-    v.get(k).and_then(|x| x.as_str()).map(|s| s.trim().to_string()).filter(|s| !s.is_empty())
+    v.get(k)
+        .and_then(|x| x.as_str())
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
 }
 
 pub(crate) fn parse_one(v: &Value) -> Option<Aircraft> {
@@ -121,20 +153,31 @@ impl Provider for AdsbV2 {
     async fn fetch(&self, q: &Query) -> Result<Vec<Aircraft>, ProviderError> {
         let mut req = self.http.get(Self::url(self.flavor, q));
         if self.flavor == Flavor::AdsbExchange {
-            let key = self
-                .secrets
-                .get("adsbx_rapidapi_key")
-                .ok_or_else(|| ProviderError::Failed("ADS-B Exchange needs your RapidAPI key (Settings → Secrets)".into()))?;
-            req = req.header("x-rapidapi-key", key).header("x-rapidapi-host", "adsbexchange-com1.p.rapidapi.com");
+            let key = self.secrets.get("adsbx_rapidapi_key").ok_or_else(|| {
+                ProviderError::Failed(
+                    "ADS-B Exchange needs your RapidAPI key (Settings → Secrets)".into(),
+                )
+            })?;
+            req = req
+                .header("x-rapidapi-key", key)
+                .header("x-rapidapi-host", "adsbexchange-com1.p.rapidapi.com");
         }
         let resp = req.send().await.map_err(http_err)?;
         let status = resp.status();
         if status.as_u16() == 429 {
-            let ra = resp.headers().get("retry-after").and_then(|v| v.to_str().ok()).and_then(|v| v.trim().parse().ok());
+            let ra = resp
+                .headers()
+                .get("retry-after")
+                .and_then(|v| v.to_str().ok())
+                .and_then(|v| v.trim().parse().ok());
             return Err(ProviderError::RateLimited(self.id(), ra));
         }
         if !status.is_success() {
-            return Err(ProviderError::Failed(format!("{} returned HTTP {}", self.id(), status.as_u16())));
+            return Err(ProviderError::Failed(format!(
+                "{} returned HTTP {}",
+                self.id(),
+                status.as_u16()
+            )));
         }
         let body: Value = resp.json().await.map_err(http_err)?;
         Ok(parse_v2(&body))
@@ -165,14 +208,27 @@ mod tests {
     }
     #[test]
     fn readsb_aircraft_key() {
-        assert_eq!(parse_v2(&json!({"aircraft":[{"hex":"abcdef","lat":1,"lon":2}]})).len(), 1);
+        assert_eq!(
+            parse_v2(&json!({"aircraft":[{"hex":"abcdef","lat":1,"lon":2}]})).len(),
+            1
+        );
         assert!(parse_v2(&json!({"error":"x"})).is_empty());
     }
     #[test]
     fn urls() {
-        let q = Query::Point { lat: 42.36431, lon: -71.00521, radius_nm: 40.0 };
-        assert_eq!(AdsbV2::url(Flavor::AdsbLol, &q), "https://api.adsb.lol/v2/point/42.3643/-71.0052/40");
-        assert_eq!(AdsbV2::url(Flavor::AdsbFi, &Query::Reg("N1".into())), "https://opendata.adsb.fi/api/v2/registration/N1");
+        let q = Query::Point {
+            lat: 42.36431,
+            lon: -71.00521,
+            radius_nm: 40.0,
+        };
+        assert_eq!(
+            AdsbV2::url(Flavor::AdsbLol, &q),
+            "https://api.adsb.lol/v2/point/42.3643/-71.0052/40"
+        );
+        assert_eq!(
+            AdsbV2::url(Flavor::AdsbFi, &Query::Reg("N1".into())),
+            "https://opendata.adsb.fi/api/v2/registration/N1"
+        );
         assert!(AdsbV2::url(Flavor::AdsbFi, &q).ends_with("/lat/42.3643/lon/-71.0052/dist/40"));
     }
 }
