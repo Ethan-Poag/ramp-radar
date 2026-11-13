@@ -1,0 +1,10 @@
+target/
+node_modules/
+web/dist/
+data/
+*.db
+*.db-*
+secrets.json
+.env
+OLD_APP_HANDOFF.md
+src-tauri/gen/
