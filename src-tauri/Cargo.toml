@@ -1,6 +1,6 @@
 [package]
 name = "ramp-radar-desktop"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 license = "MIT"
 description = "Ramp Radar desktop app (Tauri 2 shell around the shared Rust core and web UI)"

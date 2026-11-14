@@ -101,7 +101,7 @@
 
   <div class="row">
     <label class="field">Alert radius
-      <input type="number" min="0.1" step="0.5" bind:value={t.radius.value} />
+      <input type="number" min="0.1" step="any" bind:value={t.radius.value} />
     </label>
     <label class="field shrink" style="width:6rem">Unit
       <select bind:value={t.radius.unit}><option value="nm">nm</option><option value="mi">mi</option><option value="km">km</option></select>
@@ -117,7 +117,7 @@
   </div>
 
   <label class="field">Altitude ceiling (ft) — ignore aircraft flying above
-    <input type="number" min="0" step="500" placeholder="no limit" value={t.ceiling_ft ?? ''} oninput={(e) => (t.ceiling_ft = e.currentTarget.value === '' ? null : Number(e.currentTarget.value))} />
+    <input type="number" min="0" step="any" placeholder="no limit" value={t.ceiling_ft ?? ''} oninput={(e) => (t.ceiling_ft = e.currentTarget.value === '' ? null : Number(e.currentTarget.value))} />
   </label>
 
   <label class="check"><input type="checkbox" checked={quiet} onchange={(e) => (t.quiet_hours = e.currentTarget.checked ? { start_min: 22 * 60, end_min: 7 * 60 } : null)} /> Quiet hours (still logged, not sent)</label>
