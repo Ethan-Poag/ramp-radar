@@ -3492,7 +3492,7 @@ checksum = "f8dcc9c7d52a811697d2151c701e0d08956f92b0e24136cf4cf27b57a6a0d9bf"
 
 [[package]]
 name = "ramp-radar-core"
-version = "0.1.3"
+version = "0.1.4"
 dependencies = [
  "async-trait",
  "axum",
@@ -3515,7 +3515,7 @@ dependencies = [
 
 [[package]]
 name = "ramp-radar-desktop"
-version = "0.1.3"
+version = "0.1.4"
 dependencies = [
  "axum",
  "keyring",

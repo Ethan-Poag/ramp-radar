@@ -48,6 +48,48 @@ jobs:
           includeUpdaterJson: true
           updaterJsonPreferNsis: true
 
+  # Version-independent names for README / install.sh one-click links.
+  # Original Tauri assets (and latest.json + .sig) stay as uploaded so the
+  # desktop updater keeps working.
+  stable-download-names:
+    needs: desktop
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Upload stable-named installer aliases
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -eu
+          tag=${GITHUB_REF_NAME}
+          mkdir -p aliases
+          cd aliases
+          gh release download "$tag" -R "$GITHUB_REPOSITORY" --pattern 'Ramp.Radar*'
+          pick() {
+            # One file matching glob, never a .sig.
+            set -- $1
+            if [ $# -ne 1 ] || [ ! -f "$1" ]; then
+              echo "expected exactly one file for pattern, got: $*" >&2
+              ls -la >&2
+              exit 1
+            fi
+            case $1 in *.sig) echo "refusing signature file $1" >&2; exit 1 ;; esac
+            echo "$1"
+          }
+          upload() {
+            src=$1 dest=$2
+            cp "$src" "$dest"
+            gh release upload "$tag" "$dest" -R "$GITHUB_REPOSITORY" --clobber
+            echo "aliased $src -> $dest"
+          }
+          upload "$(pick 'Ramp.Radar_*_x64-setup.exe')" RampRadar-windows-x64-setup.exe
+          upload "$(pick 'Ramp.Radar_*_x64_en-US.msi')" RampRadar-windows-x64.msi
+          upload "$(pick 'Ramp.Radar_*_aarch64.dmg')" RampRadar-macos-apple-silicon.dmg
+          upload "$(pick 'Ramp.Radar_*_x64.dmg')" RampRadar-macos-intel.dmg
+          upload "$(pick 'Ramp.Radar_*_amd64.AppImage')" RampRadar-linux-x86_64.AppImage
+          upload "$(pick 'Ramp.Radar_*_amd64.deb')" RampRadar-linux-amd64.deb
+          upload "$(pick 'Ramp.Radar-*.x86_64.rpm')" RampRadar-linux-x86_64.rpm
+
   server:
     strategy:
       fail-fast: false

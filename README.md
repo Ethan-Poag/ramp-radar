@@ -26,16 +26,26 @@ a map, history, and pluggable data sources with automatic failover.
 
 ## Download
 
-Installers and server binaries are on the [latest GitHub release](https://github.com/Ethan-Poag/ramp-radar/releases/latest).
+These links always point at the latest version:
 
-The desktop app checks GitHub for a new version on startup and can install it with one click (Settings → Check for updates). The headless server/Pi build does not auto-update. If you are on a version older than 0.1.2, install 0.1.2 once by hand; later versions will then update themselves.
+* **Windows:** [setup.exe](https://github.com/Ethan-Poag/ramp-radar/releases/latest/download/RampRadar-windows-x64-setup.exe) or [MSI](https://github.com/Ethan-Poag/ramp-radar/releases/latest/download/RampRadar-windows-x64.msi). Builds are unsigned — if Windows warns you, click **More info**, then **Run anyway**.
+* **macOS:** [Apple silicon (M1, M2, M3, M4)](https://github.com/Ethan-Poag/ramp-radar/releases/latest/download/RampRadar-macos-apple-silicon.dmg) or [Intel](https://github.com/Ethan-Poag/ramp-radar/releases/latest/download/RampRadar-macos-intel.dmg). Apple menu → About This Mac tells you which you have. Builds are unsigned — right-click the app and choose **Open** (or run `xattr -dr com.apple.quarantine "/Applications/Ramp Radar.app"`).
+* **Linux desktop:** one line, which installs the `.deb` with apt on Debian/Ubuntu, the `.rpm` with dnf on Fedora/RHEL, or an AppImage into `~/.local/bin` otherwise:
 
-Pick the file for your OS:
+  ```bash
+  curl -fsSL https://raw.githubusercontent.com/Ethan-Poag/ramp-radar/main/install.sh | sh
+  ```
 
-* **Windows:** the `.msi` or the `-setup.exe`. Builds are unsigned, so Windows SmartScreen may warn you — click **More info**, then **Run anyway**.
-* **macOS:** the `.dmg` (Apple silicon or Intel). Builds are unsigned — right-click the app and choose **Open** (or run `xattr -dr com.apple.quarantine "/Applications/Ramp Radar.app"`).
-* **Linux desktop:** the `.AppImage` or `.deb` (and `.rpm` if one is attached).
-* **Raspberry Pi / Linux server:** `ramp-radar-server-linux-arm64.tar.gz` or `ramp-radar-server-linux-x86_64.tar.gz` — see the server install steps below.
+  Or grab [AppImage](https://github.com/Ethan-Poag/ramp-radar/releases/latest/download/RampRadar-linux-x86_64.AppImage) or [deb](https://github.com/Ethan-Poag/ramp-radar/releases/latest/download/RampRadar-linux-amd64.deb) yourself. Safer two-step than piping to `sh`: download [install.sh](https://raw.githubusercontent.com/Ethan-Poag/ramp-radar/main/install.sh), read it, then run `sh install.sh`.
+* **Raspberry Pi / Linux server:** one line to install the headless server, enable the systemd service, and print the browser address `http://<host>:8080`:
+
+  ```bash
+  curl -fsSL https://raw.githubusercontent.com/Ethan-Poag/ramp-radar/main/install.sh | sh -s -- --server
+  ```
+
+  Or download `ramp-radar-server-linux-arm64.tar.gz` / `ramp-radar-server-linux-x86_64.tar.gz` from the [latest release](https://github.com/Ethan-Poag/ramp-radar/releases/latest) — see the server install steps below. Safer two-step: download [install.sh](https://raw.githubusercontent.com/Ethan-Poag/ramp-radar/main/install.sh), read it, then run `sh install.sh --server`.
+
+The desktop app checks GitHub for a new version on startup and can install it with one click (Settings → Check for updates). The headless server/Pi build does not auto-update. If you are on a version older than 0.1.2, install a current desktop build once by hand; later versions will then update themselves.
 
 Repo: [Ethan-Poag/ramp-radar](https://github.com/Ethan-Poag/ramp-radar).
 
