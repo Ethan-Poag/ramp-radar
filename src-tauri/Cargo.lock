@@ -41,44 +41,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ramp-radar-core"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "axum",
- "chrono",
- "csv",
- "futures-util",
- "lettre",
- "mime_guess",
- "reqwest 0.12.28",
- "rusqlite",
- "rust-embed",
- "serde",
- "serde_json",
- "thiserror 2.0.21",
- "tokio",
- "tokio-stream",
- "tracing",
- "uuid",
-]
-
-[[package]]
-name = "ramp-radar-desktop"
-version = "0.1.0"
-dependencies = [
- "ramp-radar-core",
- "axum",
- "keyring",
- "tauri",
- "tauri-build",
- "tauri-plugin-notification",
- "tokio",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
 name = "alloc-no-stdlib"
 version = "3.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3396,6 +3358,44 @@ name = "r-efi"
 version = "6.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f8dcc9c7d52a811697d2151c701e0d08956f92b0e24136cf4cf27b57a6a0d9bf"
+
+[[package]]
+name = "ramp-radar-core"
+version = "0.1.1"
+dependencies = [
+ "async-trait",
+ "axum",
+ "chrono",
+ "csv",
+ "futures-util",
+ "lettre",
+ "mime_guess",
+ "reqwest 0.12.28",
+ "rusqlite",
+ "rust-embed",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
+ "tokio",
+ "tokio-stream",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "ramp-radar-desktop"
+version = "0.1.1"
+dependencies = [
+ "axum",
+ "keyring",
+ "ramp-radar-core",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-notification",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+]
 
 [[package]]
 name = "rand"
