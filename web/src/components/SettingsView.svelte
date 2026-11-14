@@ -146,6 +146,24 @@
     <p class="small muted">Nothing is published anywhere unless you configure a notification channel. Aircraft enrolled in the FAA's LADD or PIA programs are filtered out of public feeds by design; Ramp Radar does not try to bypass that. Secrets (tokens, passwords) are stored in the OS keychain on desktop, or in a 0600 file on the server, and are never shown again after saving.</p>
   </section>
 
+  {#if store.info?.mode === 'desktop'}
+    <section class="card">
+      <h3 style="margin-top:0">Updates</h3>
+      <p class="small" style="margin-top:0">Current version: {store.info?.version}</p>
+      {#if store.update.available}
+        <p>Ramp Radar {store.update.version} is available.</p>
+      {:else if store.update.error}
+        <p class="small" style="color:var(--bad)">{store.update.error}</p>
+      {/if}
+      <div class="row" style="justify-content:flex-start">
+        <button type="button" class="shrink" disabled={store.update.checking || store.update.installing} onclick={() => store.checkUpdates(false)}>{store.update.checking ? 'Checking…' : 'Check for updates'}</button>
+        {#if store.update.available}
+          <button type="button" class="primary shrink" disabled={store.update.installing} onclick={() => store.installUpdate()}>{store.update.installing ? 'Updating…' : 'Update now'}</button>
+        {/if}
+      </div>
+    </section>
+  {/if}
+
   <section class="card small muted">
     <h3 style="margin-top:0">About &amp; data attribution</h3>
     Ramp Radar {store.info?.version} · MIT licence. Map © OpenStreetMap contributors. Airports: OurAirports (public domain). Live traffic via adsb.lol is ODbL-licensed (© adsb.lol contributors); airplanes.live and adsb.fi data are subject to their own terms. Please respect each service's rate limits.

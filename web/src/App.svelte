@@ -5,6 +5,7 @@
   import MapView from './components/MapView.svelte';
   import EventLog from './components/EventLog.svelte';
   import SettingsView from './components/SettingsView.svelte';
+  import UpdateBanner from './components/UpdateBanner.svelte';
 
   let err = $state('');
   onMount(() => {
@@ -35,6 +36,7 @@
       {#if !store.connected}<span class="muted"> · offline</span>{/if}
     </div>
   </header>
+  <UpdateBanner />
 
   <main>
     {#if err}

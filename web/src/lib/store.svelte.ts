@@ -1,4 +1,4 @@
-import { api, type Airport, type LogEvent, type Settings, type Tracker, type TrackerState, type ProviderHealth } from './api';
+import { api, type Airport, type LogEvent, type Settings, type Tracker, type TrackerState, type ProviderHealth, type UpdateInfo } from './api';
 
 export const NEW = 'new';
 
@@ -15,6 +15,13 @@ class Store {
   connected = $state(false);
   toasts = $state<{ id: number; text: string; kind: 'ok' | 'err' | 'alert' }[]>([]);
   tab = $state<'trackers' | 'map' | 'log' | 'settings'>('trackers');
+  update = $state<UpdateInfo & { checking: boolean; installing: boolean; error: string; dismissed: boolean }>({
+    available: false,
+    checking: false,
+    installing: false,
+    error: '',
+    dismissed: false,
+  });
   private tid = 0;
 
   get unit() {
@@ -55,6 +62,43 @@ class Store {
     api.providers().then((p) => (this.providers = p)).catch(() => {});
     setInterval(() => api.providers().then((p) => (this.providers = p)).catch(() => {}), 10_000);
     this.connect();
+    if (this.info?.mode === 'desktop') this.checkUpdates(true);
+  }
+
+  async checkUpdates(silent = false) {
+    if (this.info?.mode !== 'desktop') return;
+    this.update.checking = true;
+    this.update.error = '';
+    try {
+      const r = await api.checkUpdate();
+      this.update.available = r.available;
+      this.update.current_version = r.current_version;
+      this.update.version = r.version;
+      this.update.notes = r.notes;
+      this.update.checking = false;
+      if (!r.available) this.update.dismissed = false;
+      if (!silent) {
+        this.toast(r.available ? `Ramp Radar ${r.version} is available` : 'You are up to date');
+      }
+    } catch (e: any) {
+      this.update.checking = false;
+      this.update.error = String(e.message ?? e);
+      if (!silent) this.toast(this.update.error, 'err');
+    }
+  }
+
+  async installUpdate() {
+    if (this.info?.mode !== 'desktop' || this.update.installing) return;
+    this.update.installing = true;
+    this.update.error = '';
+    try {
+      await api.installUpdate();
+      this.toast('Update installed — restarting…');
+    } catch (e: any) {
+      this.update.installing = false;
+      this.update.error = String(e.message ?? e);
+      this.toast(this.update.error, 'err');
+    }
   }
 
   private connect() {

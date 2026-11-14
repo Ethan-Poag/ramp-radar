@@ -24,6 +24,8 @@ a map, history, and pluggable data sources with automatic failover.
 
 Installers and server binaries are on the [latest GitHub release](https://github.com/Ethan-Poag/ramp-radar/releases/latest).
 
+The desktop app checks GitHub for a new version on startup and can install it with one click (Settings → Check for updates). The headless server/Pi build does not auto-update. If you are on a version older than 0.1.2, install 0.1.2 once by hand; later versions will then update themselves.
+
 Pick the file for your OS:
 
 * **Windows:** the `.msi` or the `-setup.exe`. Builds are unsigned, so Windows SmartScreen may warn you — click **More info**, then **Run anyway**.
@@ -51,6 +53,7 @@ Repo: [Ethan-Poag/ramp-radar](https://github.com/Ethan-Poag/ramp-radar).
 * **Airports** — OurAirports CSV, cached locally, search by ICAO / IATA / name / city.
 * **Notifications** — in-app sound, desktop/browser notification, [ntfy](https://ntfy.sh), SMTP email,
   generic webhook, Twilio SMS (your own account). Each has a "send test" button.
+* **Auto-update** (desktop) — signed updates from GitHub Releases, with a quiet banner when a new version is ready.
 * **Privacy & security** — block list; secrets are write-only (never returned by the API, never logged),
   stored in the OS keychain (desktop) or a `0600` file (server); optional access token for the server.
 

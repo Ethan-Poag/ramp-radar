@@ -44,3 +44,5 @@ cargo check --manifest-path src-tauri/Cargo.toml     # if you touched core APIs 
 ## Releasing
 
 Tag `vX.Y.Z` → `.github/workflows/release.yml` builds desktop installers (Windows, macOS arm64/x64, Linux) as a GitHub release and attaches `ramp-radar-server-linux-{x86_64,arm64}.tar.gz`.
+
+Desktop updates are signed. The release workflow needs the repo secrets `TAURI_SIGNING_PRIVATE_KEY` and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`. Losing that key means installed copies can no longer auto-update and people would have to reinstall once. Do not commit the private key or password.

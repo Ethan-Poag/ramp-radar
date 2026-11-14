@@ -6,15 +6,24 @@
 
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use axum::extract::Request;
+use axum::http::{header, StatusCode};
+use axum::middleware::{self, Next};
+use axum::response::IntoResponse;
+use axum::routing::{get, post};
+use axum::{Json, Router};
 use ramp_radar_core::{
     api,
     app::{App, AppOptions},
     secrets::SecretStore,
     store::Store,
 };
+use serde_json::{json, Value};
 use std::sync::Arc;
 use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
 use tauri_plugin_notification::NotificationExt;
+use tauri_plugin_updater::UpdaterExt;
+use tower::ServiceExt;
 
 const KEYRING_SERVICE: &str = "ramp-radar";
 
@@ -24,7 +33,10 @@ struct KeychainSecrets;
 
 impl SecretStore for KeychainSecrets {
     fn get(&self, name: &str) -> Option<String> {
-        keyring::Entry::new(KEYRING_SERVICE, name).ok()?.get_password().ok()
+        keyring::Entry::new(KEYRING_SERVICE, name)
+            .ok()?
+            .get_password()
+            .ok()
     }
     fn set(&self, name: &str, value: &str) -> Result<(), String> {
         keyring::Entry::new(KEYRING_SERVICE, name)
@@ -41,11 +53,15 @@ impl SecretStore for KeychainSecrets {
 
 fn main() {
     tracing_subscriber::fmt()
-        .with_env_filter(tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()))
+        .with_env_filter(
+            tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()),
+        )
         .init();
 
     tauri::Builder::default()
         .plugin(tauri_plugin_notification::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .setup(|app| {
             let data_dir = app.path().app_data_dir()?;
             std::fs::create_dir_all(&data_dir)?;
@@ -76,10 +92,29 @@ fn main() {
                 }));
                 core.spawn_poller();
 
-                let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.expect("bind loopback");
+                let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+                    .await
+                    .expect("bind loopback");
                 let port = listener.local_addr().expect("addr").port();
+
+                // The UI is served over loopback HTTP, so the desktop shell exposes
+                // updater endpoints on the same server instead of relying on Tauri IPC.
+                let updater = desktop_updater_router(handle.clone());
+                let core_router = api::router(core);
                 tauri::async_runtime::spawn(async move {
-                    let _ = axum::serve(listener, api::router(core)).await;
+                    let svc =
+                        Router::new().fallback_service(tower::service_fn(move |req: Request| {
+                            let updater = updater.clone();
+                            let core_router = core_router.clone();
+                            async move {
+                                if req.uri().path().starts_with("/api/desktop/") {
+                                    updater.oneshot(req).await
+                                } else {
+                                    core_router.oneshot(req).await
+                                }
+                            }
+                        }));
+                    let _ = axum::serve(listener, svc).await;
                 });
                 port
             });
@@ -94,4 +129,82 @@ fn main() {
         })
         .run(tauri::generate_context!())
         .expect("error while running Ramp Radar");
+}
+
+fn desktop_updater_router(handle: tauri::AppHandle) -> Router {
+    Router::new()
+        .route(
+            "/api/desktop/update",
+            get({
+                let handle = handle.clone();
+                move || {
+                    let handle = handle.clone();
+                    async move { check_update(handle).await }
+                }
+            }),
+        )
+        .route(
+            "/api/desktop/update/install",
+            post({
+                let handle = handle.clone();
+                move || {
+                    let handle = handle.clone();
+                    async move { install_update(handle).await }
+                }
+            }),
+        )
+        .layer(middleware::from_fn(loopback_only))
+}
+
+async fn loopback_only(req: Request, next: Next) -> axum::response::Response {
+    let host = req
+        .headers()
+        .get(header::HOST)
+        .and_then(|h| h.to_str().ok())
+        .unwrap_or("");
+    let name = host.rsplit_once(':').map(|x| x.0).unwrap_or(host);
+    if !matches!(name, "127.0.0.1" | "localhost" | "[::1]") {
+        return StatusCode::FORBIDDEN.into_response();
+    }
+    next.run(req).await
+}
+
+fn api_err(code: StatusCode, msg: impl Into<String>) -> (StatusCode, Json<Value>) {
+    (code, Json(json!({ "error": msg.into() })))
+}
+
+async fn check_update(app: tauri::AppHandle) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    let updater = app
+        .updater()
+        .map_err(|e| api_err(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    match updater.check().await {
+        Ok(Some(update)) => Ok(Json(json!({
+            "available": true,
+            "current_version": update.current_version,
+            "version": update.version,
+            "notes": update.body,
+        }))),
+        Ok(None) => Ok(Json(json!({
+            "available": false,
+            "current_version": app.package_info().version.to_string(),
+        }))),
+        Err(e) => Err(api_err(StatusCode::BAD_GATEWAY, e.to_string())),
+    }
+}
+
+async fn install_update(app: tauri::AppHandle) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    let updater = app
+        .updater()
+        .map_err(|e| api_err(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    let update = updater
+        .check()
+        .await
+        .map_err(|e| api_err(StatusCode::BAD_GATEWAY, e.to_string()))?
+        .ok_or_else(|| api_err(StatusCode::NOT_FOUND, "no update available"))?;
+    update
+        .download_and_install(|_chunk, _total| {}, || {})
+        .await
+        .map_err(|e| api_err(StatusCode::BAD_GATEWAY, e.to_string()))?;
+    // Windows installers typically exit the app during install. Elsewhere we relaunch.
+    app.restart();
 }

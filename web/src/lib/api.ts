@@ -112,6 +112,14 @@ export interface ProviderHealth {
   backoff_secs: number | null;
 }
 
+
+export interface UpdateInfo {
+  available: boolean;
+  current_version?: string;
+  version?: string;
+  notes?: string | null;
+}
+
 export class ApiError extends Error {}
 
 async function req<T>(method: string, url: string, body?: unknown): Promise<T> {
@@ -153,4 +161,6 @@ export const api = {
   lookup: (q: string) => req<{ target: Target | null; hex: string | null; n_number: string | null }>('GET', `/api/lookup?q=${encodeURIComponent(q)}`),
   providers: () => req<ProviderHealth[]>('GET', '/api/providers'),
   pollNow: () => req<void>('POST', '/api/poll'),
+  checkUpdate: () => req<UpdateInfo>('GET', '/api/desktop/update'),
+  installUpdate: () => req<{ ok?: boolean }>('POST', '/api/desktop/update/install'),
 };
