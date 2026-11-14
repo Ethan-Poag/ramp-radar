@@ -5,7 +5,7 @@
   "identifier": "io.github.ethanpoag.rampradar",
   "build": {
     "frontendDist": "../web/dist",
-    "beforeBuildCommand": "npm --prefix web ci && npm --prefix web run build"
+    "beforeBuildCommand": "node src-tauri/build-web.js || node build-web.js"
   },
   "app": {
     "windows": [],
