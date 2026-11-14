@@ -1,4 +1,4 @@
-# Aircraft Monitor
+# Ramp Radar
 
 Get alerted when a specific aircraft gets close to an airport — and watch it on a live map.
 
@@ -19,6 +19,19 @@ a map, history, and pluggable data sources with automatic failover.
 | <img src="docs/screenshots/phone-trackers.png" width="180"> | <img src="docs/screenshots/trackers-dark.png" width="260"> | <img src="docs/screenshots/log.png" width="260"> | <img src="docs/screenshots/settings.png" width="260"> |
 
 *(Screenshots were taken from the running server against live adsb.lol / adsb.fi data.)*
+
+## Download
+
+Installers and server binaries are on the [latest GitHub release](https://github.com/Ethan-Poag/ramp-radar/releases/latest).
+
+Pick the file for your OS:
+
+* **Windows:** the `.msi` or the `-setup.exe`. Builds are unsigned, so Windows SmartScreen may warn you — click **More info**, then **Run anyway**.
+* **macOS:** the `.dmg` (Apple silicon or Intel). Builds are unsigned — right-click the app and choose **Open** (or run `xattr -dr com.apple.quarantine "/Applications/Ramp Radar.app"`).
+* **Linux desktop:** the `.AppImage` or `.deb` (and `.rpm` if one is attached).
+* **Raspberry Pi / Linux server:** `ramp-radar-server-linux-arm64.tar.gz` or `ramp-radar-server-linux-x86_64.tar.gz` — see the server install steps below.
+
+Repo: [Ethan-Poag/ramp-radar](https://github.com/Ethan-Poag/ramp-radar).
 
 ## Features
 
@@ -46,14 +59,14 @@ a map, history, and pluggable data sources with automatic failover.
 ```bash
 # prerequisites: Rust (stable) and Node 20+
 cd web && npm ci && npm run build && cd ..
-cargo run --release -p aircraft-monitor-server            # http://127.0.0.1:8080
-cargo run --release -p aircraft-monitor-server -- --mock  # simulated traffic, no internet needed
+cargo run --release -p ramp-radar-server            # http://127.0.0.1:8080
+cargo run --release -p ramp-radar-server -- --mock  # simulated traffic, no internet needed
 ```
 
 Open <http://127.0.0.1:8080>, click **+ New tracker**, enter a tail (e.g. `N12345`), pick an airport, save.
 
-Options (flag / env var): `--bind` / `AM_BIND` (default `127.0.0.1:8080`), `--data-dir` / `AM_DATA_DIR`,
-`--access-token` / `AM_ACCESS_TOKEN`, `--mock`, `--mock-center` (airport ident), `--mock-scale` (time acceleration),
+Options (flag / env var): `--bind` / `RR_BIND` (default `127.0.0.1:8080`), `--data-dir` / `RR_DATA_DIR`,
+`--access-token` / `RR_ACCESS_TOKEN`, `--mock`, `--mock-center` (airport ident), `--mock-scale` (time acceleration),
 `--offline` (don't download airports).
 
 **LAN exposure:** bind to `0.0.0.0:8080` *and set an access token*. Visit `http://host:8080/?token=…` once;
@@ -64,13 +77,7 @@ The server warns at start-up if it is reachable off-loopback without a token.
 
 ### Desktop (Windows / macOS / Linux)
 
-Download the installer for your OS from the **Releases** page (built by `.github/workflows/release.yml`):
-`.msi`/`.exe` (Windows), `.dmg` (macOS, Apple silicon and Intel), `.deb`/`.AppImage`/`.rpm` (Linux).
-
-> Release builds are **unsigned** until signing certificates are configured. Windows SmartScreen:
-> *More info → Run anyway*. macOS: right-click → *Open* (or `xattr -dr com.apple.quarantine "/Applications/Aircraft Monitor.app"`).
-
-Build it yourself: install [Tauri 2 prerequisites](https://v2.tauri.app/start/prerequisites/), then
+See [Download](#download) for prebuilt installers. To build it yourself: install [Tauri 2 prerequisites](https://v2.tauri.app/start/prerequisites/), then
 `cd src-tauri && cargo install tauri-cli --version "^2" --locked && cargo tauri build`.
 On Debian/Ubuntu: `sudo apt install libwebkit2gtk-4.1-dev libgtk-3-dev libxdo-dev libdbus-1-dev libssl-dev pkg-config`.
 
@@ -83,12 +90,12 @@ Manager / Secret Service.
 **Prebuilt binary** (arm64 or x86_64, from Releases):
 
 ```bash
-tar xzf aircraft-monitor-server-linux-arm64.tar.gz
-sudo install -m755 aircraft-monitor-server /usr/local/bin/
-sudo useradd --system --create-home --home-dir /var/lib/aircraft-monitor aircraft-monitor
-sudo cp aircraft-monitor.service /etc/systemd/system/
-sudo systemctl edit aircraft-monitor        # add:  [Service]  Environment=AM_ACCESS_TOKEN=<long random token>
-sudo systemctl enable --now aircraft-monitor
+tar xzf ramp-radar-server-linux-arm64.tar.gz
+sudo install -m755 ramp-radar-server /usr/local/bin/
+sudo useradd --system --create-home --home-dir /var/lib/ramp-radar ramp-radar
+sudo cp ramp-radar.service /etc/systemd/system/
+sudo systemctl edit ramp-radar              # add:  [Service]  Environment=RR_ACCESS_TOKEN=<long random token>
+sudo systemctl enable --now ramp-radar
 ```
 Then browse to `http://<pi-address>:8080/?token=<token>`. Works on 64-bit Raspberry Pi OS (Pi 3/4/5/Zero 2 W).
 
@@ -97,7 +104,7 @@ Then browse to `http://<pi-address>:8080/?token=<token>`. Works on 64-bit Raspbe
 **Docker** (multi-arch image; see `deploy/Dockerfile`, `deploy/docker-compose.yml`):
 
 ```bash
-AM_ACCESS_TOKEN=change-me docker compose -f deploy/docker-compose.yml up -d --build
+RR_ACCESS_TOKEN=change-me docker compose -f deploy/docker-compose.yml up -d --build
 ```
 
 **Use your own receiver**: if you run readsb/dump1090/tar1090 on the same Pi, enable *Local receiver* in
@@ -125,7 +132,7 @@ Licence terms of third-party services can change — verify before commercial us
 * Nothing is published anywhere unless *you* configure a notification channel.
 * **Block list** (Settings → Privacy): hex / registration / callsign entries can't be tracked and never appear on the map.
 * Aircraft in the FAA **LADD** (Limiting Aircraft Data Displayed) and **PIA** (Privacy ICAO Address) programmes
-  are withheld or anonymised by public feeds *by design*. Aircraft Monitor does not try to bypass that; if a tail
+  are withheld or anonymised by public feeds *by design*. Ramp Radar does not try to bypass that; if a tail
   isn't visible, track a Mode S hex you are entitled to follow, or use your own receiver. Please use this tool
   respectfully — don't track people's private aircraft in order to harass them.
 * Public ntfy topics are readable by anyone who guesses the name: use a long random topic or self-host.

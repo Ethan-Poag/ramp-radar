@@ -1,10 +1,10 @@
 [package]
-name = "aircraft-monitor-desktop"
+name = "ramp-radar-desktop"
 version = "0.1.0"
 edition = "2021"
 license = "MIT"
-description = "Aircraft Monitor desktop app (Tauri 2 shell around the shared Rust core and web UI)"
-default-run = "aircraft-monitor-desktop"
+description = "Ramp Radar desktop app (Tauri 2 shell around the shared Rust core and web UI)"
+default-run = "ramp-radar-desktop"
 
 # Standalone workspace: the root workspace (core + server) builds without GTK/WebKit.
 [workspace]
@@ -13,7 +13,7 @@ default-run = "aircraft-monitor-desktop"
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-aircraft-monitor-core = { path = "../crates/core" }
+ramp-radar-core = { path = "../crates/core" }
 tauri = { version = "2", features = [] }
 tauri-plugin-notification = "2"
 tokio = { version = "1", features = ["rt-multi-thread", "net"] }

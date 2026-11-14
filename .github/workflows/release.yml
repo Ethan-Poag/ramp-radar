@@ -12,7 +12,7 @@ jobs:
         include:
           - { os: ubuntu-22.04, args: "" }
           - { os: macos-latest, args: "--target aarch64-apple-darwin" }
-          - { os: macos-13, args: "--target x86_64-apple-darwin" }
+          - { os: macos-15-intel, args: "--target x86_64-apple-darwin" }
           - { os: windows-latest, args: "" }
     runs-on: ${{ matrix.os }}
     steps:
@@ -37,8 +37,8 @@ jobs:
         with:
           projectPath: src-tauri
           tagName: ${{ github.ref_name }}
-          releaseName: "Aircraft Monitor ${{ github.ref_name }}"
-          releaseDraft: true
+          releaseName: "Ramp Radar ${{ github.ref_name }}"
+          releaseDraft: false
           args: ${{ matrix.args }}
 
   server:
@@ -57,21 +57,21 @@ jobs:
         with: { node-version: 22 }
       - run: npm ci && npm run build
         working-directory: web
-      - run: cargo build --release -p aircraft-monitor-server
+      - run: cargo build --release -p ramp-radar-server
       - name: Package
         run: |
           mkdir dist
-          cp target/release/aircraft-monitor-server dist/
-          cp deploy/aircraft-monitor.service README.md LICENSE dist/
-          tar -C dist -czf aircraft-monitor-server-${{ matrix.name }}.tar.gz .
+          cp target/release/ramp-radar-server dist/
+          cp deploy/ramp-radar.service README.md LICENSE dist/
+          tar -C dist -czf ramp-radar-server-${{ matrix.name }}.tar.gz .
       - uses: actions/upload-artifact@v4
-        with: { name: "server-${{ matrix.name }}", path: "aircraft-monitor-server-*.tar.gz" }
+        with: { name: "server-${{ matrix.name }}", path: "ramp-radar-server-*.tar.gz" }
       - name: Attach to release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          draft: true
-          files: aircraft-monitor-server-*.tar.gz
+          draft: false
+          files: ramp-radar-server-*.tar.gz
 
   docker:
     runs-on: ubuntu-latest

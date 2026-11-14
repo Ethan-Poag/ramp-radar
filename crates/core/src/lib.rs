@@ -1,4 +1,4 @@
-//! Aircraft Monitor core: geometry, N-number conversion, providers, engine, notifications,
+//! Ramp Radar core: geometry, N-number conversion, providers, engine, notifications,
 //! persistence and the HTTP API used by both the headless server and the desktop shell.
 
 pub mod airports;

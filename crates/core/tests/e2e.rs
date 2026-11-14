@@ -1,6 +1,8 @@
 //! End-to-end: mock provider -> poll -> engine -> SQLite -> ntfy delivery (to a local fake ntfy).
 
-use aircraft_monitor_core::{
+use axum::{body::Body, http::Request};
+use http_body_util::BodyExt;
+use ramp_radar_core::{
     api,
     app::{App, AppOptions},
     model::*,
@@ -8,8 +10,6 @@ use aircraft_monitor_core::{
     settings::ProviderConfig,
     store::Store,
 };
-use axum::{body::Body, http::Request};
-use http_body_util::BodyExt;
 use std::sync::{Arc, Mutex};
 use tower::ServiceExt;
 
@@ -277,12 +277,12 @@ async fn access_token_guard() {
         .unwrap()
         .to_str()
         .unwrap()
-        .contains("am_token=s3cret"));
+        .contains("rr_token=s3cret"));
     let resp = api::router(app.clone())
         .oneshot(
             Request::builder()
                 .uri("/api/info")
-                .header("cookie", "am_token=wrong")
+                .header("cookie", "rr_token=wrong")
                 .body(Body::empty())
                 .unwrap(),
         )

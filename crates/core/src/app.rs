@@ -61,9 +61,9 @@ pub struct App {
 pub fn http_client() -> reqwest::Client {
     reqwest::Client::builder()
         .user_agent(concat!(
-            "aircraft-monitor/",
+            "ramp-radar/",
             env!("CARGO_PKG_VERSION"),
-            " (+https://github.com/OWNER/aircraft-monitor)"
+            " (+https://github.com/Ethan-Poag/ramp-radar)"
         ))
         .timeout(Duration::from_secs(12))
         .build()

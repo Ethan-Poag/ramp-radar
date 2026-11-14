@@ -1,12 +1,12 @@
 # Build report
 
-Status of the first build of Aircraft Monitor (MVP), as of this commit series.
+Status of the first build of Ramp Radar (MVP), as of this commit series.
 
 ## What works (verified)
 
 | Goal | Evidence |
 |---|---|
-| Server runs end-to-end, live data | Ran `aircraft-monitor-server` against **adsb.lol live**; 5 trackers (tail, hex, callsign) near KBOS/KPVD/PHNL showed real aircraft as *within / inbound / on ground* with distance, ETA, altitude; events logged to SQLite. |
+| Server runs end-to-end, live data | Ran `ramp-radar-server` against **adsb.lol live**; 5 trackers (tail, hex, callsign) near KBOS/KPVD/PHNL showed real aircraft as *within / inbound / on ground* with distance, ETA, altitude; events logged to SQLite. |
 | Map with live traffic near KBOS | `docs/screenshots/map.png` — MapLibre + OSM, radius rings, trails, heading-rotated aircraft, 29 nearby aircraft. |
 | Provider failover | Observed for real: adsb.lol → HTTP 429 and airplanes.live → HTTP 403 from this network; the chain backed them off and served from adsb.fi. |
 | Mock provider end-to-end | `--mock --mock-scale 60`: enter / exit / landing events fired and were persisted. |
@@ -25,7 +25,7 @@ the Packages index, and extracted them into a throwaway sysroot in `/tmp` (nothi
 `pkg-config` at it. Results:
 
 1. `cargo check` on `src-tauri` — clean, no warnings.
-2. `cargo build` (debug) links a working `aircraft-monitor-desktop` binary.
+2. `cargo build` (debug) links a working `ramp-radar-desktop` binary.
 3. Smoke run under Xvfb: the in-process core starts (downloaded 72,693 airports), serves on a random loopback port
    with `mode: "desktop"` and the native-notification hook registered; a foreign `Host` header gets 403; WebKit's
    web/network processes start and load the page. (For this run only I temporarily symlinked WebKit's hard-coded
@@ -37,8 +37,8 @@ Not done: producing installers (`cargo tauri build` bundling), and macOS/Windows
 
 ```bash
 cd web && npm ci && npm run build && cd ..
-cargo run --release -p aircraft-monitor-server                 # live data, http://127.0.0.1:8080
-cargo run --release -p aircraft-monitor-server -- --mock       # offline simulator
+cargo run --release -p ramp-radar-server                 # live data, http://127.0.0.1:8080
+cargo run --release -p ramp-radar-server -- --mock       # offline simulator
 cd src-tauri && cargo tauri dev                                # desktop (needs GTK/WebKit dev packages)
 ```
 More (Pi, Docker, systemd, env vars): `README.md`.

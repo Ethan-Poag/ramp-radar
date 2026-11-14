@@ -129,7 +129,7 @@ impl Notifier {
             .ok_or("webhook URL is not set")?;
         let payload = serde_json::json!({
             "title": title, "message": body, "text": format!("{title}: {body}"),
-            "source": "aircraft-monitor", "ts": chrono::Utc::now().to_rfc3339()
+            "source": "ramp-radar", "ts": chrono::Utc::now().to_rfc3339()
         });
         check(self.http.post(url).json(&payload).send().await).await
     }

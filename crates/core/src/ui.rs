@@ -10,8 +10,8 @@ use rust_embed::RustEmbed;
 #[allow_missing = true]
 struct Assets;
 
-const STUB: &str = "<!doctype html><title>Aircraft Monitor</title><body style='font-family:sans-serif;padding:2rem'>\
-<h1>Aircraft Monitor</h1><p>The web UI was not built into this binary. Run <code>npm ci && npm run build</code> in <code>web/</code> and rebuild.</p>";
+const STUB: &str = "<!doctype html><title>Ramp Radar</title><body style='font-family:sans-serif;padding:2rem'>\
+<h1>Ramp Radar</h1><p>The web UI was not built into this binary. Run <code>npm ci && npm run build</code> in <code>web/</code> and rebuild.</p>";
 
 pub async fn static_handler(uri: Uri) -> Response {
     let path = uri.path().trim_start_matches('/');

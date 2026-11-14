@@ -23,7 +23,7 @@
 
 <div class="shell">
   <header>
-    <div class="brand"><svg viewBox="0 0 64 64" width="26" height="26"><path fill="currentColor" d="M32 8c2 0 3 2 3 4v14l20 12v5l-20-6v10l6 5v4l-9-3-9 3v-4l6-5V37l-20 6v-5l20-12V12c0-2 1-4 3-4z"/></svg><span>Aircraft Monitor</span></div>
+    <div class="brand"><svg viewBox="0 0 64 64" width="26" height="26"><path fill="currentColor" d="M32 8c2 0 3 2 3 4v14l20 12v5l-20-6v10l6 5v4l-9-3-9 3v-4l6-5V37l-20 6v-5l20-12V12c0-2 1-4 3-4z"/></svg><span>Ramp Radar</span></div>
     <nav class="tabs desktop-only">
       {#each tabs as [id, label]}
         <button class:active={store.tab === id} onclick={() => (store.tab = id)}>{label}</button>

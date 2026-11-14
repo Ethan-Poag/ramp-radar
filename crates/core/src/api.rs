@@ -69,7 +69,7 @@ fn ct_eq(a: &str, b: &str) -> bool {
 fn cookie_token(h: &HeaderMap) -> Option<String> {
     let c = h.get(header::COOKIE)?.to_str().ok()?;
     c.split(';')
-        .filter_map(|p| p.trim().strip_prefix("am_token="))
+        .filter_map(|p| p.trim().strip_prefix("rr_token="))
         .next()
         .map(String::from)
 }
@@ -107,7 +107,7 @@ async fn guard(State(app): S, req: Request, next: Next) -> Response {
         if query_tok.is_some() {
             resp.headers_mut().insert(
                 header::SET_COOKIE,
-                format!("am_token={token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=31536000")
+                format!("rr_token={token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=31536000")
                     .parse()
                     .unwrap(),
             );
@@ -123,8 +123,8 @@ async fn guard(State(app): S, req: Request, next: Next) -> Response {
     }
     (
         StatusCode::UNAUTHORIZED,
-        Html("<!doctype html><meta name=viewport content='width=device-width'><title>Aircraft Monitor</title>\
-              <body style='font-family:sans-serif;max-width:24rem;margin:4rem auto'><h2>Aircraft Monitor</h2>\
+        Html("<!doctype html><meta name=viewport content='width=device-width'><title>Ramp Radar</title>\
+              <body style='font-family:sans-serif;max-width:24rem;margin:4rem auto'><h2>Ramp Radar</h2>\
               <form method=get action=/><input name=token type=password placeholder='Access token' autofocus style='padding:.5rem;width:100%'>\
               <button style='margin-top:.5rem;padding:.5rem 1rem'>Open</button></form>"),
     )
@@ -135,7 +135,7 @@ async fn guard(State(app): S, req: Request, next: Next) -> Response {
 
 async fn info(State(app): S) -> Json<Value> {
     Json(json!({
-        "name": "aircraft-monitor",
+        "name": "ramp-radar",
         "version": env!("CARGO_PKG_VERSION"),
         "mode": app.opts.mode,
         "auth": app.opts.access_token.is_some(),
@@ -320,7 +320,7 @@ async fn events_csv(State(app): S, QS(q): QS<EvQ>) -> Result<Response, (StatusCo
             (header::CONTENT_TYPE, "text/csv; charset=utf-8"),
             (
                 header::CONTENT_DISPOSITION,
-                "attachment; filename=\"aircraft-monitor-events.csv\"",
+                "attachment; filename=\"ramp-radar-events.csv\"",
             ),
         ],
         crate::store::events_to_csv(&ev),
@@ -464,7 +464,7 @@ async fn notify_test(State(app): S, Json(b): Json<NT>) -> Json<Value> {
     let res = app
         .notify(
             &[b.channel],
-            "TEST: Aircraft Monitor",
+            "TEST: Ramp Radar",
             "If you can read this, this channel works.",
             &app.settings(),
         )

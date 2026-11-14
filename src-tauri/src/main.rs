@@ -1,4 +1,4 @@
-//! Aircraft Monitor desktop shell.
+//! Ramp Radar desktop shell.
 //!
 //! Starts the shared Rust core (same axum router as the headless server) on a random
 //! loopback port inside this process, then opens a webview pointing at it. Native
@@ -6,7 +6,7 @@
 
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use aircraft_monitor_core::{
+use ramp_radar_core::{
     api,
     app::{App, AppOptions},
     secrets::SecretStore,
@@ -16,7 +16,7 @@ use std::sync::Arc;
 use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
 use tauri_plugin_notification::NotificationExt;
 
-const KEYRING_SERVICE: &str = "aircraft-monitor";
+const KEYRING_SERVICE: &str = "ramp-radar";
 
 /// Secrets in the OS keychain (Keychain on macOS, Credential Manager on Windows,
 /// Secret Service on Linux). Values never touch disk in our own files.
@@ -86,12 +86,12 @@ fn main() {
 
             let url = format!("http://127.0.0.1:{port}/");
             WebviewWindowBuilder::new(app, "main", WebviewUrl::External(url.parse().expect("url")))
-                .title("Aircraft Monitor")
+                .title("Ramp Radar")
                 .inner_size(1200.0, 800.0)
                 .min_inner_size(380.0, 600.0)
                 .build()?;
             Ok(())
         })
         .run(tauri::generate_context!())
-        .expect("error while running Aircraft Monitor");
+        .expect("error while running Ramp Radar");
 }

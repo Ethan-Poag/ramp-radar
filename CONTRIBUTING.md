@@ -43,5 +43,4 @@ cargo check --manifest-path src-tauri/Cargo.toml     # if you touched core APIs 
 
 ## Releasing
 
-Tag `vX.Y.Z` → `.github/workflows/release.yml` builds desktop installers (Windows, macOS arm64/x64, Linux) as a draft
-GitHub release and attaches `aircraft-monitor-server-linux-{x86_64,arm64}.tar.gz`.
+Tag `vX.Y.Z` → `.github/workflows/release.yml` builds desktop installers (Windows, macOS arm64/x64, Linux) as a GitHub release and attaches `ramp-radar-server-linux-{x86_64,arm64}.tar.gz`.

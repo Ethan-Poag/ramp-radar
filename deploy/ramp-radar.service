@@ -1,0 +1,29 @@
+# Install:  sudo cp ramp-radar-server /usr/local/bin/
+#           sudo useradd --system --create-home --home-dir /var/lib/ramp-radar ramp-radar
+#           sudo cp deploy/ramp-radar.service /etc/systemd/system/
+#           sudo systemctl edit ramp-radar   # add: [Service]\n Environment=RR_ACCESS_TOKEN=<long random token>
+#           sudo systemctl enable --now ramp-radar
+[Unit]
+Description=Ramp Radar (headless server)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=ramp-radar
+Environment=RR_BIND=0.0.0.0:8080
+Environment=RR_DATA_DIR=/var/lib/ramp-radar
+ExecStart=/usr/local/bin/ramp-radar-server
+Restart=on-failure
+RestartSec=5
+# hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/ramp-radar
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+
+[Install]
+WantedBy=multi-user.target

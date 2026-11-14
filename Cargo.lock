@@ -24,44 +24,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "aircraft-monitor-core"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "axum",
- "chrono",
- "csv",
- "futures-util",
- "http-body-util",
- "lettre",
- "mime_guess",
- "reqwest",
- "rusqlite",
- "rust-embed",
- "serde",
- "serde_json",
- "thiserror 2.0.21",
- "tokio",
- "tokio-stream",
- "tower",
- "tracing",
- "uuid",
-]
-
-[[package]]
-name = "aircraft-monitor-server"
-version = "0.1.0"
-dependencies = [
- "aircraft-monitor-core",
- "axum",
- "clap",
- "dirs",
- "tokio",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
 name = "android_system_properties"
 version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1155,6 +1117,44 @@ name = "r-efi"
 version = "6.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f8dcc9c7d52a811697d2151c701e0d08956f92b0e24136cf4cf27b57a6a0d9bf"
+
+[[package]]
+name = "ramp-radar-core"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "axum",
+ "chrono",
+ "csv",
+ "futures-util",
+ "http-body-util",
+ "lettre",
+ "mime_guess",
+ "reqwest",
+ "rusqlite",
+ "rust-embed",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
+ "tokio",
+ "tokio-stream",
+ "tower",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "ramp-radar-server"
+version = "0.1.0"
+dependencies = [
+ "axum",
+ "clap",
+ "dirs",
+ "ramp-radar-core",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+]
 
 [[package]]
 name = "rand"

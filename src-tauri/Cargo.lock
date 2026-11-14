@@ -41,7 +41,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "aircraft-monitor-core"
+name = "ramp-radar-core"
 version = "0.1.0"
 dependencies = [
  "async-trait",
@@ -64,10 +64,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "aircraft-monitor-desktop"
+name = "ramp-radar-desktop"
 version = "0.1.0"
 dependencies = [
- "aircraft-monitor-core",
+ "ramp-radar-core",
  "axum",
  "keyring",
  "tauri",

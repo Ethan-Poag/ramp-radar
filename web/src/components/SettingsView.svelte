@@ -116,7 +116,7 @@
     </div>
     <div class="row">
       <label class="field">Username <input type="text" bind:value={s.notifications.email.username} autocomplete="off" /></label>
-      <label class="field">From <input type="text" bind:value={s.notifications.email.from} placeholder="Aircraft Monitor <me@example.com>" /></label>
+      <label class="field">From <input type="text" bind:value={s.notifications.email.from} placeholder="Ramp Radar <me@example.com>" /></label>
       <label class="field">To <input type="email" bind:value={s.notifications.email.to} /></label>
     </div>
     <SecretField name="smtp_password" label="SMTP password" bind:isSet={secrets['smtp_password']} />
@@ -143,12 +143,12 @@
     <label class="field">Block list — aircraft that must never be tracked or shown (hex, registration or callsign; one per line)
       <textarea rows="3" bind:value={blocklist} placeholder="a1b2c3&#10;N12345"></textarea>
     </label>
-    <p class="small muted">Nothing is published anywhere unless you configure a notification channel. Aircraft enrolled in the FAA's LADD or PIA programs are filtered out of public feeds by design; Aircraft Monitor does not try to bypass that. Secrets (tokens, passwords) are stored in the OS keychain on desktop, or in a 0600 file on the server, and are never shown again after saving.</p>
+    <p class="small muted">Nothing is published anywhere unless you configure a notification channel. Aircraft enrolled in the FAA's LADD or PIA programs are filtered out of public feeds by design; Ramp Radar does not try to bypass that. Secrets (tokens, passwords) are stored in the OS keychain on desktop, or in a 0600 file on the server, and are never shown again after saving.</p>
   </section>
 
   <section class="card small muted">
     <h3 style="margin-top:0">About &amp; data attribution</h3>
-    Aircraft Monitor {store.info?.version} · MIT licence. Map © OpenStreetMap contributors. Airports: OurAirports (public domain). Live traffic via adsb.lol is ODbL-licensed (© adsb.lol contributors); airplanes.live and adsb.fi data are subject to their own terms. Please respect each service's rate limits.
+    Ramp Radar {store.info?.version} · MIT licence. Map © OpenStreetMap contributors. Airports: OurAirports (public domain). Live traffic via adsb.lol is ODbL-licensed (© adsb.lol contributors); airplanes.live and adsb.fi data are subject to their own terms. Please respect each service's rate limits.
   </section>
 </form>
 

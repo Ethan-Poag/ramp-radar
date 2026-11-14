@@ -1,4 +1,4 @@
-# Aircraft Monitor — Design
+# Ramp Radar — Design
 
 Successor to the old Windows/Tkinter "Aircraft Proximity Monitor" (one aircraft, one airport,
 Textbelt SMS, adsb.one). This app watches **many** aircraft ("trackers"), alerts through
@@ -16,7 +16,7 @@ several channels, shows a live map, and runs either as a desktop app or a headle
                  │        axum Router: REST + SSE + embedded Svelte UI                 │
                  └──────────────┬──────────────────────────────┬──────────────────────┘
                                 │                              │
-                  crates/server (bin: `aircraft-monitor-server`)   src-tauri (desktop)
+                  crates/server (bin: `ramp-radar-server`)   src-tauri (desktop)
                   0.0.0.0:8080, token auth, 0600 secrets file      starts the same Router on
                   Pi / Docker / systemd                            127.0.0.1:<random>, webview
                                                                    points at it; OS keychain,
@@ -42,7 +42,7 @@ deploy/         Dockerfile, systemd unit, Pi notes
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────┐
-│ ✈ Aircraft Monitor     [Trackers] [Map] [Log] [Settings]        ● adsb.lol ok │
+│ ✈ Ramp Radar           [Trackers] [Map] [Log] [Settings]        ● adsb.lol ok │
 ├───────────────────────────────┬──────────────────────────────────────────────┤
 │ SETTINGS (selected tracker)   │  [+ New tracker]                             │
 │ Label  [Dad's Bonanza     ]   │ ┌──────────────────────────────────────────┐ │

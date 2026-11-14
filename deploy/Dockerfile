@@ -12,15 +12,15 @@ COPY Cargo.toml Cargo.lock ./
 COPY crates ./crates
 # src-tauri is excluded from the server workspace
 COPY --from=web /src/web/dist ./web/dist
-RUN cargo build --release -p aircraft-monitor-server
+RUN cargo build --release -p ramp-radar-server
 
 FROM debian:bookworm-slim
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates tini \
     && rm -rf /var/lib/apt/lists/* \
     && useradd --system --create-home --home-dir /data --uid 10001 monitor
-COPY --from=build /src/target/release/aircraft-monitor-server /usr/local/bin/aircraft-monitor-server
+COPY --from=build /src/target/release/ramp-radar-server /usr/local/bin/ramp-radar-server
 USER monitor
-ENV AM_DATA_DIR=/data AM_BIND=0.0.0.0:8080
+ENV RR_DATA_DIR=/data RR_BIND=0.0.0.0:8080
 VOLUME /data
 EXPOSE 8080
-ENTRYPOINT ["/usr/bin/tini", "--", "aircraft-monitor-server"]
+ENTRYPOINT ["/usr/bin/tini", "--", "ramp-radar-server"]

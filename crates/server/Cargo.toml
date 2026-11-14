@@ -1,16 +1,16 @@
 [package]
-name = "aircraft-monitor-server"
+name = "ramp-radar-server"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
-description = "Headless Aircraft Monitor server (Raspberry Pi / Linux / Docker)"
+description = "Headless Ramp Radar server (Raspberry Pi / Linux / Docker)"
 
 [[bin]]
-name = "aircraft-monitor-server"
+name = "ramp-radar-server"
 path = "src/main.rs"
 
 [dependencies]
-aircraft-monitor-core = { path = "../core" }
+ramp-radar-core = { path = "../core" }
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "signal", "net"] }
 axum = "0.8"
 clap = { version = "4", features = ["derive", "env"] }

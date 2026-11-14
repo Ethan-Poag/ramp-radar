@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Aircraft Monitor",
+  "productName": "Ramp Radar",
   "version": "0.1.0",
-  "identifier": "dev.aircraftmonitor.app",
+  "identifier": "io.github.ethanpoag.rampradar",
   "build": {
     "frontendDist": "../web/dist",
     "beforeBuildCommand": "npm --prefix ../web ci && npm --prefix ../web run build"
