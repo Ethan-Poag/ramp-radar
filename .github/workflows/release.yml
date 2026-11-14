@@ -29,13 +29,16 @@ jobs:
         with: { workspaces: "src-tauri" }
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
+      - run: npm ci && npm run build
+        working-directory: web
       # Unsigned builds. For signed/notarised releases add the Apple / Windows certificate secrets
       # described in https://v2.tauri.app/distribute/ and pass them as env to tauri-action.
+      # projectPath is the repo root so the action finds src-tauri/; beforeBuildCommand
+      # also runs from that root (`npm --prefix web …` in tauri.conf.json).
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          projectPath: src-tauri
           tagName: ${{ github.ref_name }}
           releaseName: "Ramp Radar ${{ github.ref_name }}"
           releaseDraft: false
