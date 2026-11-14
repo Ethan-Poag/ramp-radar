@@ -5,7 +5,10 @@
   "identifier": "io.github.ethanpoag.rampradar",
   "build": {
     "frontendDist": "../web/dist",
-    "beforeBuildCommand": "node src-tauri/build-web.js || node build-web.js"
+    "beforeBuildCommand": {
+      "cwd": "../web",
+      "script": "npm ci && npm run build"
+    }
   },
   "app": {
     "windows": [],
