@@ -42,6 +42,9 @@ for (const theme of ['light', 'dark']) {
     await sleep(800);
     await shot('settings', 1360, 1100);
   }
+  await clickTab('Help');
+  await sleep(800);
+  await shot(theme === 'light' ? 'help' : 'help-dark', 1360, 1400);
 }
 
 // phone

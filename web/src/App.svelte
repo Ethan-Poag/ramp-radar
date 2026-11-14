@@ -5,11 +5,30 @@
   import MapView from './components/MapView.svelte';
   import EventLog from './components/EventLog.svelte';
   import SettingsView from './components/SettingsView.svelte';
+  import HelpView from './components/HelpView.svelte';
   import UpdateBanner from './components/UpdateBanner.svelte';
 
   let err = $state('');
   onMount(() => {
     store.init().catch((e) => (err = String(e.message ?? e)));
+    const onClick = (e: MouseEvent) => {
+      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      const a = (e.target as HTMLElement | null)?.closest?.('a[href]') as HTMLAnchorElement | null;
+      if (!a) return;
+      let url: URL;
+      try { url = new URL(a.href, location.href); } catch { return; }
+      if (url.origin === location.origin || !/^https?:$/.test(url.protocol)) return;
+      e.preventDefault();
+      if (store.info?.mode === 'desktop') {
+        fetch('/api/desktop/open', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ url: url.href }) })
+          .then((r) => { if (!r.ok) throw new Error('open failed'); })
+          .catch(() => { window.open(url.href, '_blank', 'noopener,noreferrer'); });
+      } else {
+        window.open(url.href, '_blank', 'noopener,noreferrer');
+      }
+    };
+    document.addEventListener('click', onClick);
+    return () => document.removeEventListener('click', onClick);
   });
 
   const tabs = [
@@ -17,6 +36,7 @@
     ['map', 'Map', '◎'],
     ['log', 'Log', '≡'],
     ['settings', 'Settings', '⚙'],
+    ['help', 'Help', '?'],
   ] as const;
   const healthy = $derived(store.providers.find((p) => p.ok));
   const failing = $derived(store.providers.length > 0 && !healthy && store.providers.some((p) => p.ok === false));
@@ -47,8 +67,10 @@
       <MapView />
     {:else if store.tab === 'log'}
       <EventLog />
-    {:else}
+    {:else if store.tab === 'settings'}
       <SettingsView />
+    {:else if store.tab === 'help'}
+      <HelpView />
     {/if}
   </main>
 

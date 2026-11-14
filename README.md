@@ -18,6 +18,10 @@ a map, history, and pluggable data sources with automatic failover.
 |---|---|---|---|
 | <img src="docs/screenshots/phone-trackers.png" width="180"> | <img src="docs/screenshots/trackers-dark.png" width="260"> | <img src="docs/screenshots/log.png" width="260"> | <img src="docs/screenshots/settings.png" width="260"> |
 
+| Help | Help (dark) |
+|---|---|
+| <img src="docs/screenshots/help.png" width="260"> | <img src="docs/screenshots/help-dark.png" width="260"> |
+
 *(Screenshots were taken from the running server against live adsb.lol / adsb.fi data.)*
 
 ## Download
@@ -54,6 +58,7 @@ Repo: [Ethan-Poag/ramp-radar](https://github.com/Ethan-Poag/ramp-radar).
 * **Notifications** — in-app sound, desktop/browser notification, [ntfy](https://ntfy.sh), SMTP email,
   generic webhook, Twilio SMS (your own account). Each has a "send test" button.
 * **Auto-update** (desktop) — signed updates from GitHub Releases, with a quiet banner when a new version is ready.
+* **Help tab** — in-app setup guide for trackers, data sources, notifications, server/Pi mode, and troubleshooting.
 * **Privacy & security** — block list; secrets are write-only (never returned by the API, never logged),
   stored in the OS keychain (desktop) or a `0600` file (server); optional access token for the server.
 

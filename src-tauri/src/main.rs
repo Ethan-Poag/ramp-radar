@@ -22,6 +22,7 @@ use serde_json::{json, Value};
 use std::sync::Arc;
 use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
 use tauri_plugin_notification::NotificationExt;
+use tauri_plugin_opener::OpenerExt;
 use tauri_plugin_updater::UpdaterExt;
 use tower::ServiceExt;
 
@@ -62,6 +63,7 @@ fn main() {
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_opener::init())
         .setup(|app| {
             let data_dir = app.path().app_data_dir()?;
             std::fs::create_dir_all(&data_dir)?;
@@ -120,10 +122,23 @@ fn main() {
             });
 
             let url = format!("http://127.0.0.1:{port}/");
+            let opener = app.handle().clone();
             WebviewWindowBuilder::new(app, "main", WebviewUrl::External(url.parse().expect("url")))
                 .title("Ramp Radar")
                 .inner_size(1200.0, 800.0)
                 .min_inner_size(380.0, 600.0)
+                .on_navigation(move |dest| {
+                    let host = dest.host_str().unwrap_or("");
+                    let loopback = matches!(host, "127.0.0.1" | "localhost" | "::1");
+                    if matches!(dest.scheme(), "http" | "https") && loopback {
+                        return true;
+                    }
+                    if matches!(dest.scheme(), "about" | "data" | "blob" | "devtools") {
+                        return true;
+                    }
+                    let _ = opener.opener().open_url(dest.as_str(), None::<&str>);
+                    false
+                })
                 .build()?;
             Ok(())
         })
@@ -153,6 +168,16 @@ fn desktop_updater_router(handle: tauri::AppHandle) -> Router {
                 }
             }),
         )
+        .route(
+            "/api/desktop/open",
+            post({
+                let handle = handle.clone();
+                move |Json(body): Json<Value>| {
+                    let handle = handle.clone();
+                    async move { open_external(handle, body).await }
+                }
+            }),
+        )
         .layer(middleware::from_fn(loopback_only))
 }
 
@@ -171,6 +196,39 @@ async fn loopback_only(req: Request, next: Next) -> axum::response::Response {
 
 fn api_err(code: StatusCode, msg: impl Into<String>) -> (StatusCode, Json<Value>) {
     (code, Json(json!({ "error": msg.into() })))
+}
+
+fn parse_http_url(raw: &str) -> Result<String, (StatusCode, Json<Value>)> {
+    let raw = raw.trim();
+    let scheme = raw
+        .split_once("://")
+        .map(|(s, _)| s)
+        .unwrap_or("")
+        .to_ascii_lowercase();
+    if !matches!(scheme.as_str(), "http" | "https")
+        || raw.chars().any(|c| c.is_ascii_whitespace() || c == '\0')
+    {
+        return Err(api_err(
+            StatusCode::BAD_REQUEST,
+            "only http(s) URLs can be opened",
+        ));
+    }
+    Ok(raw.to_string())
+}
+
+async fn open_external(
+    app: tauri::AppHandle,
+    body: Value,
+) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    let raw = body
+        .get("url")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| api_err(StatusCode::BAD_REQUEST, "url is required"))?;
+    let url = parse_http_url(raw)?;
+    app.opener()
+        .open_url(&url, None::<&str>)
+        .map_err(|e| api_err(StatusCode::BAD_GATEWAY, e.to_string()))?;
+    Ok(Json(json!({ "ok": true })))
 }
 
 async fn check_update(app: tauri::AppHandle) -> Result<Json<Value>, (StatusCode, Json<Value>)> {

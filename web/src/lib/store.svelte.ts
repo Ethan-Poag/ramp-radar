@@ -14,7 +14,7 @@ class Store {
   selected = $state<string | null>(null); // tracker id | 'new' | null
   connected = $state(false);
   toasts = $state<{ id: number; text: string; kind: 'ok' | 'err' | 'alert' }[]>([]);
-  tab = $state<'trackers' | 'map' | 'log' | 'settings'>('trackers');
+  tab = $state<'trackers' | 'map' | 'log' | 'settings' | 'help'>('trackers');
   update = $state<UpdateInfo & { checking: boolean; installing: boolean; error: string; dismissed: boolean }>({
     available: false,
     checking: false,
